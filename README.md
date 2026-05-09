@@ -59,6 +59,30 @@ cd functions && npm install && npm run build
 cd .. && firebase deploy --only functions
 ```
 
+## テスト用に物件をコマンドで1件追加する
+
+Firestore のルールは **Firebase Admin SDK** ではバイパスされるため、サービスアカウント鍵があれば CLI から登録できます。
+
+1. Firebase コンソール → **プロジェクトの設定** → **サービス アカウント** → **新しい秘密鍵の生成**（JSON を保存。**Git にコミットしない**）
+2. `functions` で依存関係を入れておく（`firebase-admin` を使うため）:
+
+   ```bash
+   cd functions && npm install
+   ```
+
+3. 実行:
+
+   ```bash
+   export GOOGLE_APPLICATION_CREDENTIALS="/絶対パス/サービスアカウント.json"
+   # 大家のマイ物件に出したいときは Authentication のユーザー UID を指定
+   export OWNER_ID="あなたのFirebase AuthのUID"
+   export TITLE="CLIテスト物件"   # 任意
+   cd functions
+   node ../scripts/seed-test-house.cjs
+   ```
+
+`OWNER_ID` を省略すると一覧には載りますが、大家画面の「自分の物件」には出ません（プレースホルダ UID のため）。
+
 ## 手動で Pages に載せる場合
 
 ```bash
