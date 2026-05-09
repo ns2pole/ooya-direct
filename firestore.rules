@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /houses/{houseId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'title', 'description', 'createdAt', 'updatedAt'
+        ]);
+
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'title', 'description', 'createdAt', 'updatedAt'
+        ]);
+
+      allow delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+      match /inquiries/{inquiryId} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
+    }
+  }
+}
