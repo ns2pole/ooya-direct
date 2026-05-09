@@ -33,8 +33,10 @@ npm run dev
 ## GitHub Pages（自動デプロイ）
 
 1. GitHub リポジトリ → **Settings** → **Pages**
-2. **Build and deployment** → Source: **GitHub Actions**
-3. **Settings** → **Secrets and variables** → **Actions** で次の **Repository secrets** を追加（`web/.env.local` と同じ値）:
+2. **Build and deployment** → **Source は必ず GitHub Actions**（**Deploy from a branch は選ばない**）  
+   - 「ブランチからデプロイ」で `main` / `(root)` にしていると、**README.md がサイトの本文のように表示**されます。React アプリは `web/` をビルドした成果物なので、**Actions 経由だけ**にしてください。
+3. 保存後、**Actions** タブで **GitHub Pages** ワークフローが成功しているか確認。失敗ならログを開く。初回は **Environments** で `github-pages` の承認が求められることがあります。
+4. **Settings** → **Secrets and variables** → **Actions** で次の **Repository secrets** を追加（`web/.env.local` と同じ値）:
 
    - `VITE_FIREBASE_API_KEY`
    - `VITE_FIREBASE_AUTH_DOMAIN`
@@ -43,7 +45,7 @@ npm run dev
    - `VITE_FIREBASE_MESSAGING_SENDER_ID`
    - `VITE_FIREBASE_APP_ID`
 
-4. `main` に push すると [`.github/workflows/github-pages.yml`](.github/workflows/github-pages.yml) が走り、`https://<ユーザー>.github.io/<リポジトリ名>/` に公開されます。  
+5. `main` に push すると [`.github/workflows/github-pages.yml`](.github/workflows/github-pages.yml) が走り、`https://<ユーザー>.github.io/<リポジトリ名>/` に公開されます。  
    **ベースパス**はワークフロー内で `VITE_BASE=/<リポジトリ名>/` に自動設定しています。
 
 カスタムドメインにする場合は、Vite の `base` と DNS を合わせて調整し、Firebase の承認済みドメインにもそのドメインを追加してください。
