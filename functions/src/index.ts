@@ -16,7 +16,7 @@ type SubmitInquiryInput = {
 };
 
 export const submitInquiry = onCall(
-  { region: REGION, cors: true },
+  { region: REGION, cors: true, invoker: "public" },
   async (request) => {
     const data = request.data as SubmitInquiryInput;
     const houseId =
