@@ -20,6 +20,10 @@ function messageForAuthCode(code: string): string {
       return 'メールアドレスの形式が正しくありません。';
     case 'auth/user-disabled':
       return 'このアカウントは無効になっています。';
+    case 'auth/operation-not-allowed':
+      return 'メール/パスワードログインが Firebase で有効になっていません。コンソールの Authentication → Sign-in method を確認してください。';
+    case 'auth/unauthorized-domain':
+      return 'このドメインは Firebase の承認済みドメインに含まれていません。コンソールの Authentication → Settings → Authorized domains を確認してください。';
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
@@ -191,7 +195,7 @@ export function LandlordPage() {
           新規登録
         </Link>
         <Link to="/" className="btn ghost">
-          公開一覧を見る
+          物件一覧
         </Link>
       </div>
 

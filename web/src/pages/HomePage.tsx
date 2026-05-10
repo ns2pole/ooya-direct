@@ -85,7 +85,10 @@ export function HomePage() {
     <section className="panel">
       <h1>物件一覧</h1>
       {houses.length === 0 ? (
-        <p>まだ物件がありません。大家さんから登録されるとここに表示されます。</p>
+        <div className="stack">
+          <p>まだ物件がありません。</p>
+          <p className="muted">大家さんから登録されるとここに表示されます。</p>
+        </div>
       ) : (
         <ul className="house-list">
           {houses.map((h) => (

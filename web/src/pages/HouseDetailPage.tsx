@@ -139,7 +139,7 @@ export function HouseDetailPage() {
     return (
       <section className="panel">
         <p>Firebase を設定してください。</p>
-        <Link to="/">一覧へ</Link>
+        <Link to="/">物件一覧へ</Link>
       </section>
     );
   }
@@ -148,7 +148,7 @@ export function HouseDetailPage() {
     return (
       <section className="panel">
         <p>物件 ID がありません。</p>
-        <Link to="/">一覧へ</Link>
+        <Link to="/">物件一覧へ</Link>
       </section>
     );
   }
@@ -157,7 +157,7 @@ export function HouseDetailPage() {
     return (
       <section className="panel">
         <p className="text-error">{loadError}</p>
-        <Link to="/">一覧へ</Link>
+        <Link to="/">物件一覧へ</Link>
       </section>
     );
   }
@@ -174,7 +174,7 @@ export function HouseDetailPage() {
     return (
       <section className="panel">
         <h1>物件が見つかりません</h1>
-        <Link to="/">一覧へ</Link>
+        <Link to="/">物件一覧へ</Link>
       </section>
     );
   }
@@ -182,7 +182,7 @@ export function HouseDetailPage() {
   return (
     <article className="panel">
       <p className="breadcrumb">
-        <Link to="/">一覧</Link>
+        <Link to="/">物件一覧</Link>
         <span aria-hidden="true"> / </span>
         <span>{house.title || '物件詳細'}</span>
       </p>
