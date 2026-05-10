@@ -13,9 +13,14 @@
 ## 事前準備（Firebase コンソール）
 
 1. **Firestore** を有効化し、本リポジトリの `firestore.rules` をデプロイ（またはコンソールに貼り付けて公開）。
-2. **Authentication** → Google を有効化。
-3. **承認済みドメイン**に **`あなたのユーザー名.github.io`** を追加（例: `ns2pole.github.io`）。GitHub Pages で Google ログインするために必要です。
-4. ウェブアプリの設定値をローカルの `web/.env.local` 用に控える。
+2. **Authentication** → **Sign-in method** で **メール/パスワード（Email/Password）** を有効化する。
+3. **Authentication** → **Users** で大家用ユーザーを追加する（メールアドレスとパスワード。パスワードはリポジトリやチャットに書かず、コンソール上のみで設定する）。
+4. **承認済みドメイン**に **`あなたのユーザー名.github.io`** を追加（例: `ns2pole.github.io`）。GitHub Pages のオリジンから Firebase Auth を使うために必要です。
+5. ウェブアプリの設定値をローカルの `web/.env.local` 用に控える。
+
+### 以前 Google でログインしていた場合（物件が一覧に出ないとき）
+
+Firestore の `houses` ドキュメントの `ownerId` は、ログイン中ユーザーの **Firebase Auth の UID** と一致している必要があります。Google アカウント用の UID のまま登録した物件は、メール/パスワードで新規作成した別ユーザーでは一覧に表示されません。Firestore コンソールで該当ドキュメントの `ownerId` を、新しい大家ユーザーの UID（Authentication のユーザ一覧で確認）に更新するか、テスト用に `scripts/seed-test-house.cjs` で `OWNER_ID` を指定して登録し直してください。
 
 ## ローカル開発
 

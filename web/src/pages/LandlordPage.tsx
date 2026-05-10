@@ -14,6 +14,25 @@ import { useAuth } from '../context/AuthContext';
 import type { House } from '../types';
 import { formatDate } from '../format';
 
+function messageForAuthCode(code: string): string {
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'メールアドレスの形式が正しくありません。';
+    case 'auth/user-disabled':
+      return 'このアカウントは無効になっています。';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'メールアドレスまたはパスワードが正しくありません。';
+    case 'auth/too-many-requests':
+      return '試行回数が多すぎます。しばらくしてから再度お試しください。';
+    case 'auth/network-request-failed':
+      return '通信に失敗しました。接続を確認してください。';
+    default:
+      return 'ログインに失敗しました。';
+  }
+}
+
 function mapHouse(id: string, data: Record<string, unknown>): House {
   return {
     id,
@@ -26,10 +45,14 @@ function mapHouse(id: string, data: Record<string, unknown>): House {
 }
 
 export function LandlordPage() {
-  const { user, loading, signInWithGoogle, signOutUser } = useAuth();
+  const { user, loading, signInWithEmailPassword, signOutUser } = useAuth();
   const [houses, setHouses] = useState<House[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !user) {
@@ -69,6 +92,23 @@ export function LandlordPage() {
     };
   }, [user]);
 
+  async function handleLoginSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginSubmitting(true);
+    try {
+      await signInWithEmailPassword(email, password);
+    } catch (err: unknown) {
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: unknown }).code)
+          : '';
+      setLoginError(messageForAuthCode(code));
+    } finally {
+      setLoginSubmitting(false);
+    }
+  }
+
   async function onDelete(h: House) {
     if (!user || h.ownerId !== user.uid) return;
     if (!window.confirm(`「${h.title || '無題'}」を削除しますか？`)) return;
@@ -98,13 +138,38 @@ export function LandlordPage() {
     return (
       <section className="panel stack">
         <h1>大家さん</h1>
-        <p>Google でログインすると、自分の物件を登録・編集できます。</p>
+        <p>ログイン ID とパスワードで、自分の物件を登録・編集できます。</p>
         <p className="muted small">
-          Firebase コンソールで Authentication を有効化し、Google プロバイダをオンにしてください。
+          Firebase コンソールで Authentication のメール/パスワードを有効化し、大家用ユーザーを作成してください。
         </p>
-        <button type="button" className="btn primary" onClick={() => void signInWithGoogle()}>
-          Google でログイン
-        </button>
+        <form className="stack" onSubmit={(ev) => void handleLoginSubmit(ev)}>
+          <label className="field">
+            <span>ログイン ID（メールアドレス）</span>
+            <input
+              type="email"
+              name="email"
+              autoComplete="username"
+              value={email}
+              onChange={(ev) => setEmail(ev.target.value)}
+              required
+            />
+          </label>
+          <label className="field">
+            <span>パスワード</span>
+            <input
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              required
+            />
+          </label>
+          {loginError ? <p className="text-error">{loginError}</p> : null}
+          <button type="submit" className="btn primary" disabled={loginSubmitting}>
+            {loginSubmitting ? 'ログイン中…' : 'ログイン'}
+          </button>
+        </form>
       </section>
     );
   }
