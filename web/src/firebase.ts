@@ -106,10 +106,12 @@ export function getDb(): Firestore {
     const forceLongPolling = preferFirestoreForceLongPolling();
     // WebKit: Listen/channel の access control 失敗を避けるため long polling を強制。
     // それ以外: WebChannel が通らないときだけ long polling に切り替え。
-    db = initializeFirestore(getFirebaseApp(), {
-      experimentalAutoDetectLongPolling: true,
-      ...(forceLongPolling ? { experimentalForceLongPolling: true } : {}),
-    });
+    db = initializeFirestore(
+      getFirebaseApp(),
+      forceLongPolling
+        ? { experimentalForceLongPolling: true }
+        : { experimentalAutoDetectLongPolling: true },
+    );
   }
   return db;
 }
