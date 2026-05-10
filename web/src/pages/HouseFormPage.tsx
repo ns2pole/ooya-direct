@@ -8,7 +8,12 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { getDb, isFirebaseConfigured, uploadHouseCoverImage } from '../firebase';
+import {
+  getDb,
+  isFirebaseConfigured,
+  messageForHouseFormSaveError,
+  uploadHouseCoverImage,
+} from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 export function HouseFormPage() {
@@ -132,7 +137,7 @@ export function HouseFormPage() {
         navigate('/landlord');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '保存に失敗しました。');
+      setError(messageForHouseFormSaveError(err));
     } finally {
       setSaving(false);
     }

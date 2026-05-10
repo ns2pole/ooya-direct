@@ -54,6 +54,36 @@ export function missingFirebaseEnvKeys(): string[] {
 const options = buildOptions();
 export const isFirebaseConfigured = options !== null;
 
+/** WebKit 系で Firestore の WebChannel がブロックされやすい環境では long polling を強制する */
+function preferFirestoreForceLongPolling(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const desktopSafari = /Safari\//.test(ua) && !/Chrome\//.test(ua) && !/Chromium\//.test(ua);
+  const iOS = /iPhone|iPad|iPod/.test(ua);
+  return desktopSafari || iOS;
+}
+
+function firebaseErrorCode(err: unknown): string | undefined {
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const c = (err as { code: unknown }).code;
+    return typeof c === 'string' ? c : undefined;
+  }
+  return undefined;
+}
+
+/** 物件フォーム保存時のエラーメッセージ（Storage 拒否時は README 指向のヒント） */
+export function messageForHouseFormSaveError(err: unknown): string {
+  const code = firebaseErrorCode(err);
+  if (code === 'storage/unauthorized') {
+    return (
+      '画像のアップロードが拒否されました（storage/unauthorized）。' +
+      'Firebase Storage のルール・バケット名（VITE_FIREBASE_STORAGE_BUCKET）・' +
+      '物件の ownerId（ログイン UID と一致）を README の「トラブルシューティング（Storage / Safari）」で確認してください。'
+    );
+  }
+  return err instanceof Error ? err.message : '保存に失敗しました。';
+}
+
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 let authInstance: Auth | null = null;
@@ -73,10 +103,12 @@ export function getFirebaseApp(): FirebaseApp {
 
 export function getDb(): Firestore {
   if (!db) {
-    // Safari など WebChannel ストリーミングが通らない環境で
-    // 自動的に long polling にフォールバックさせる
+    const forceLongPolling = preferFirestoreForceLongPolling();
+    // WebKit: Listen/channel の access control 失敗を避けるため long polling を強制。
+    // それ以外: WebChannel が通らないときだけ long polling に切り替え。
     db = initializeFirestore(getFirebaseApp(), {
       experimentalAutoDetectLongPolling: true,
+      ...(forceLongPolling ? { experimentalForceLongPolling: true } : {}),
     });
   }
   return db;

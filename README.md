@@ -104,6 +104,28 @@ VITE_BASE=/ooya-direct/ npm run build
 - `houses/{houseId}` … `ownerId`, `title`, `description`, `createdAt`, `updatedAt`
 - `houses/{houseId}/inquiries/{inquiryId}` … `message`, `displayName`, `createdAt`（書き込みは Functions のみ）
 
+## トラブルシューティング（Storage の `storage/unauthorized` と Safari の Firestore）
+
+### Storage: `User does not have permission` / `storage/unauthorized`
+
+ルールは [`storage.rules`](storage.rules) のとおり、**ログイン済み・画像 5MB 未満・`image/*`・Firestore に `houses/{houseId}` があり `ownerId` がログイン UID と一致**したときだけ書き込みを許可します。デプロイ済みでも次を順に確認してください。
+
+1. **バケット名（`VITE_FIREBASE_STORAGE_BUCKET`）**  
+   ブラウザの開発者ツール → **Network** で、失敗した Storage リクエストの URL のホスト（例: `*.appspot.com` や `*.firebasestorage.app`）を確認し、Firebase コンソール → **Storage** に表示されている**既定バケット名**と一致するか見る。GitHub Actions の **Repository secrets** と `web/.env.local` の誤りがよくあります。  
+   `firebase deploy --only storage` でルールはそのプロジェクトのバケットに紐づきます。**別バケット**にクライアントだけ向いていると、ルールどおりでも常に拒否されます。
+
+2. **`ownerId` と UID**  
+   Firestore で該当 `houses/{houseId}` を開き、**Authentication** の現在ユーザー **UID** と `ownerId` が完全一致するか確認する（シードのプレースホルダ、別プロバイダで作ったユーザーなどは、本 README の「以前 Google でログインしていた場合」の節を参照）。
+
+3. **画像**  
+   5MB 超、`image/*` 以外として評価されると拒否されます。
+
+### Safari: `Firestore/Listen/channel` と `access control checks`
+
+コンソールに出る **Fetch API cannot load … Firestore/Listen/channel … due to access control checks** は、端末上の Firestore **リアルタイム接続（WebChannel）**が WebKit 側でブロックされやすいときのログです。**Storage セキュリティルール内の `firestore.get()` はサーバー側で実行される**ため、この Listen エラーと `storage/unauthorized` に**直接の因果はありません**（Safari 上で別々に起きやすいだけです）。
+
+切り分けでは **Chrome（デスクトップ）で同じ操作**を試し、Storage が通るか・Listen エラーが消えるかを比較してください。アプリ側では WebKit 系ブラウザで Firestore の **long polling を優先**する設定を入れています（[`web/src/firebase.ts`](web/src/firebase.ts)）。
+
 ## ライセンス
 
 用途に合わせて自由に改変してください。
