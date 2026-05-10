@@ -32,6 +32,8 @@ function messageForAuthCode(code: string): string {
       return '試行回数が多すぎます。しばらくしてから再度お試しください。';
     case 'auth/network-request-failed':
       return '通信に失敗しました。接続を確認してください。';
+    case 'auth/invalid-api-key':
+      return 'Firebase の API キーが無効です。コンソールの「プロジェクトの設定」→「マイアプリ」で apiKey をコピーし直し、web/.env.local を更新して開発サーバーを再起動してください。Google Cloud の API キーにリファラー制限がある場合は localhost / 公開サイトのオリジンを許可してください。';
     default:
       return 'ログインに失敗しました。';
   }
