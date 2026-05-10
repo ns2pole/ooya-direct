@@ -6,6 +6,8 @@ admin.initializeApp();
 const REGION = "asia-northeast1";
 const MAX_MESSAGE = 2000;
 const MAX_DISPLAY_NAME = 80;
+/** スパム緩和: 物件あたりの問い合わせ上限（この件数に達すると新規投稿不可） */
+const MAX_INQUIRIES_PER_HOUSE = 100;
 
 type SubmitInquiryInput = {
   houseId?: unknown;
@@ -55,7 +57,17 @@ export const submitInquiry = onCall(
       throw new HttpsError("not-found", "物件が見つかりません。");
     }
 
-    const docRef = await houseRef.collection("inquiries").add({
+    const inquiriesColl = houseRef.collection("inquiries");
+    const countSnap = await inquiriesColl.count().get();
+    const inquiryCount = countSnap.data().count;
+    if (inquiryCount >= MAX_INQUIRIES_PER_HOUSE) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `この物件への問い合わせは上限（${MAX_INQUIRIES_PER_HOUSE}件）に達しています。`
+      );
+    }
+
+    const docRef = await inquiriesColl.add({
       message,
       displayName,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
