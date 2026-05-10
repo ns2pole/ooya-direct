@@ -8,15 +8,25 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'createdAt', 'updatedAt'
-        ]);
+          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt'
+        ])
+        && (!('photoUrl' in request.resource.data)
+          || (request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() > 0
+            && request.resource.data.photoUrl.size() < 2048
+            && request.resource.data.photoUrl.matches('https://.*')));
 
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'createdAt', 'updatedAt'
-        ]);
+          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt'
+        ])
+        && (!('photoUrl' in request.resource.data)
+          || (request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() > 0
+            && request.resource.data.photoUrl.size() < 2048
+            && request.resource.data.photoUrl.matches('https://.*')));
 
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;

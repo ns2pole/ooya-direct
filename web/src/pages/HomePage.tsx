@@ -6,11 +6,15 @@ import type { House } from '../types';
 import { formatDate } from '../format';
 
 function mapHouse(id: string, data: Record<string, unknown>): House {
+  const rawPhoto = data.photoUrl;
+  const photoUrl =
+    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
   return {
     id,
     ownerId: String(data.ownerId ?? ''),
     title: String(data.title ?? ''),
     description: String(data.description ?? ''),
+    photoUrl,
     createdAt: (data.createdAt as House['createdAt']) ?? null,
     updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
   };
@@ -94,8 +98,23 @@ export function HomePage() {
           {houses.map((h) => (
             <li key={h.id}>
               <Link to={`/houses/${h.id}`} className="house-card">
-                <span className="house-title">{h.title || '（無題）'}</span>
-                <span className="muted">{formatDate(h.createdAt)}</span>
+                {h.photoUrl ? (
+                  <img
+                    src={h.photoUrl}
+                    alt=""
+                    className="house-card-thumb"
+                    width={112}
+                    height={80}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="house-card-thumb house-card-thumb--empty" aria-hidden />
+                )}
+                <span className="house-card-main">
+                  <span className="house-title">{h.title || '（無題）'}</span>
+                  <span className="muted">{formatDate(h.createdAt)}</span>
+                </span>
               </Link>
             </li>
           ))}

@@ -8,7 +8,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { getDb, isFirebaseConfigured } from '../firebase';
+import { getDb, isFirebaseConfigured, uploadHouseCoverImage } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 export function HouseFormPage() {
@@ -19,9 +19,14 @@ export function HouseFormPage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
   useEffect(() => {
     if (!isFirebaseConfigured || isNew || !houseId || !user) {
@@ -46,6 +51,10 @@ export function HouseFormPage() {
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
+          const p = data.photoUrl;
+          setExistingPhotoUrl(
+            typeof p === 'string' && p.trim() !== '' ? p.trim() : null
+          );
           setError(null);
         }
       } catch (e) {
@@ -62,6 +71,32 @@ export function HouseFormPage() {
     };
   }, [houseId, isNew, user]);
 
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+    };
+  }, [coverPreviewUrl]);
+
+  function onCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイル（JPEG / PNG / GIF / WebP）を選んでください。');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError('画像は 5MB 以下にしてください。');
+      return;
+    }
+    setError(null);
+    setCoverFile(file);
+    setCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user || !isFirebaseConfigured) return;
@@ -76,13 +111,24 @@ export function HouseFormPage() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+        if (coverFile) {
+          const photoUrl = await uploadHouseCoverImage(ref.id, coverFile);
+          await updateDoc(doc(getDb(), 'houses', ref.id), {
+            photoUrl,
+            updatedAt: serverTimestamp(),
+          });
+        }
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
-        await updateDoc(doc(getDb(), 'houses', houseId), {
+        const payload: Record<string, unknown> = {
           title: title.trim(),
           description: description.trim(),
           updatedAt: serverTimestamp(),
-        });
+        };
+        if (coverFile) {
+          payload.photoUrl = await uploadHouseCoverImage(houseId, coverFile);
+        }
+        await updateDoc(doc(getDb(), 'houses', houseId), payload);
         navigate('/landlord');
       }
     } catch (err) {
@@ -157,7 +203,27 @@ export function HouseFormPage() {
             maxLength={8000}
           />
         </label>
-        {error && isNew ? <p className="text-error">{error}</p> : null}
+        <div className="field">
+          <span>代表画像（任意・5MB 以下）</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={onCoverFileChange}
+          />
+          <p className="muted small" style={{ margin: 0 }}>
+            物件一覧・詳細ページに表示されます。編集で選び直すと差し替わります。
+          </p>
+          {coverPreviewUrl ? (
+            <div className="house-form-preview">
+              <img src={coverPreviewUrl} alt="" width={280} height={160} />
+            </div>
+          ) : existingPhotoUrl ? (
+            <div className="house-form-preview">
+              <img src={existingPhotoUrl} alt="" width={280} height={160} />
+            </div>
+          ) : null}
+        </div>
+        {error ? <p className="text-error">{error}</p> : null}
         <div className="row">
           <button type="submit" className="btn primary" disabled={saving}>
             {saving ? '保存中…' : '保存'}

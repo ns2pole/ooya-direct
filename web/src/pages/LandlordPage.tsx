@@ -40,11 +40,15 @@ function messageForAuthCode(code: string): string {
 }
 
 function mapHouse(id: string, data: Record<string, unknown>): House {
+  const rawPhoto = data.photoUrl;
+  const photoUrl =
+    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
   return {
     id,
     ownerId: String(data.ownerId ?? ''),
     title: String(data.title ?? ''),
     description: String(data.description ?? ''),
+    photoUrl,
     createdAt: (data.createdAt as House['createdAt']) ?? null,
     updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
   };
@@ -210,9 +214,24 @@ export function LandlordPage() {
         <ul className="house-list">
           {houses.map((h) => (
             <li key={h.id} className="landlord-row">
-              <div>
-                <strong>{h.title || '（無題）'}</strong>
-                <div className="muted small">{formatDate(h.updatedAt ?? h.createdAt)}</div>
+              <div className="landlord-row-head">
+                {h.photoUrl ? (
+                  <img
+                    src={h.photoUrl}
+                    alt=""
+                    className="landlord-thumb"
+                    width={72}
+                    height={52}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="landlord-thumb landlord-thumb--empty" aria-hidden />
+                )}
+                <div>
+                  <strong>{h.title || '（無題）'}</strong>
+                  <div className="muted small">{formatDate(h.updatedAt ?? h.createdAt)}</div>
+                </div>
               </div>
               <div className="row">
                 <Link to={`/houses/${h.id}`} className="btn ghost">

@@ -2,6 +2,7 @@ import { initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
+import { getDownloadURL, getStorage, ref, uploadBytes, type FirebaseStorage } from 'firebase/storage';
 
 export const FUNCTIONS_REGION = 'asia-northeast1';
 
@@ -56,6 +57,7 @@ export const isFirebaseConfigured = options !== null;
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
 let authInstance: Auth | null = null;
+let storageInstance: FirebaseStorage | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!options) {
@@ -85,4 +87,25 @@ export function getAuthApp(): Auth {
 
 export function getFns() {
   return getFunctions(getFirebaseApp(), FUNCTIONS_REGION);
+}
+
+export function getStorageApp(): FirebaseStorage {
+  if (!storageInstance) {
+    storageInstance = getStorage(getFirebaseApp());
+  }
+  return storageInstance;
+}
+
+const COVER_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+/** 物件の代表画像を Storage に保存し、ダウンロード URL を返す */
+export async function uploadHouseCoverImage(houseId: string, file: File): Promise<string> {
+  const raw = file.name.split('.').pop()?.toLowerCase();
+  const ext = raw && COVER_EXT.has(raw) ? raw : 'jpg';
+  const path = `houses/${houseId}/cover.${ext}`;
+  const storageRef = ref(getStorageApp(), path);
+  await uploadBytes(storageRef, file, {
+    contentType: file.type && file.type.startsWith('image/') ? file.type : `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+  });
+  return getDownloadURL(storageRef);
 }

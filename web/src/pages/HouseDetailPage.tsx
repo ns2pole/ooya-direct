@@ -15,11 +15,15 @@ import type { House, Inquiry } from '../types';
 import { formatDate } from '../format';
 
 function mapHouse(id: string, data: Record<string, unknown>): House {
+  const rawPhoto = data.photoUrl;
+  const photoUrl =
+    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
   return {
     id,
     ownerId: String(data.ownerId ?? ''),
     title: String(data.title ?? ''),
     description: String(data.description ?? ''),
+    photoUrl,
     createdAt: (data.createdAt as House['createdAt']) ?? null,
     updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
   };
@@ -188,6 +192,19 @@ export function HouseDetailPage() {
       </p>
       <h1>{house.title || '（無題）'}</h1>
       <p className="muted">掲載: {formatDate(house.createdAt)}</p>
+      {house.photoUrl ? (
+        <div className="house-hero">
+          <img
+            src={house.photoUrl}
+            alt={house.title ? `${house.title}の画像` : '物件の画像'}
+            className="house-hero-img"
+            width={800}
+            height={450}
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      ) : null}
       <div className="prose">
         {house.description ? (
           <p style={{ whiteSpace: 'pre-wrap' }}>{house.description}</p>

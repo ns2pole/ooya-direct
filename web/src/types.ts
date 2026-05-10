@@ -5,6 +5,8 @@ export type House = {
   ownerId: string;
   title: string;
   description: string;
+  /** Firebase Storage の代表画像 URL（未設定のときは null） */
+  photoUrl: string | null;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
