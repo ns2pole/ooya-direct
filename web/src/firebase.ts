@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getDownloadURL, getStorage, ref, uploadBytes, type FirebaseStorage } from 'firebase/storage';
 
@@ -73,7 +73,11 @@ export function getFirebaseApp(): FirebaseApp {
 
 export function getDb(): Firestore {
   if (!db) {
-    db = getFirestore(getFirebaseApp());
+    // Safari など WebChannel ストリーミングが通らない環境で
+    // 自動的に long polling にフォールバックさせる
+    db = initializeFirestore(getFirebaseApp(), {
+      experimentalAutoDetectLongPolling: true,
+    });
   }
   return db;
 }
