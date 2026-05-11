@@ -15,7 +15,7 @@ export type House = {
   town: string;
   /** 家賃（表示用テキスト） */
   rent: string;
-  /** 広さ（セレクト値） */
+  /** 間取り（セレクト値、例: 1K / 5DK） */
   areaSize: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;

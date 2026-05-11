@@ -140,7 +140,8 @@ export function HouseFormPage() {
           setCity(String(data.city ?? ''));
           setTown(String(data.town ?? ''));
           setRent(String(data.rent ?? ''));
-          setAreaSize(String(data.areaSize ?? ''));
+          const rawArea = String(data.areaSize ?? '').trim();
+          setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
           const p = data.photoUrl;
           setExistingPhotoUrl(
             typeof p === 'string' && p.trim() !== '' ? p.trim() : null
@@ -359,7 +360,7 @@ export function HouseFormPage() {
           />
         </label>
         <label className="field">
-          <span>広さ</span>
+          <span>間取り</span>
           <select value={areaSize} onChange={(e) => setAreaSize(e.target.value)}>
             <option value="">選択してください（任意）</option>
             {AREA_SIZE_OPTIONS.map((o) => (

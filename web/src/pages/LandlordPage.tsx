@@ -11,6 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
@@ -220,7 +221,7 @@ export function LandlordPage() {
                     {[
                       houseLocationLine(h),
                       h.rent ? `家賃 ${h.rent}` : '',
-                      h.areaSize,
+                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
                       formatDateOnly(h.updatedAt ?? h.createdAt),
                     ]
                       .filter(Boolean)

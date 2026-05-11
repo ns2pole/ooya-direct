@@ -11,6 +11,7 @@ import { Link, useParams } from 'react-router-dom';
 import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
+import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { formatDate } from '../format';
@@ -178,9 +179,15 @@ export function HouseDetailPage() {
       </p>
       <h1>{house.title || '（無題）'}</h1>
       <p className="muted">掲載: {formatDate(house.createdAt)}</p>
-      {houseLocationLine(house) || house.rent || house.areaSize ? (
+      {houseLocationLine(house) ||
+      house.rent ||
+      (house.areaSize && isKnownLayoutAreaSize(house.areaSize)) ? (
         <p className="muted small">
-          {[houseLocationLine(house), house.rent ? `家賃 ${house.rent}` : '', house.areaSize]
+          {[
+            houseLocationLine(house),
+            house.rent ? `家賃 ${house.rent}` : '',
+            isKnownLayoutAreaSize(house.areaSize) ? house.areaSize : '',
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>

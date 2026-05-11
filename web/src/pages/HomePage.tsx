@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
+import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
@@ -103,7 +104,7 @@ export function HomePage() {
                     {[
                       houseLocationLine(h),
                       h.rent ? `家賃 ${h.rent}` : '',
-                      h.areaSize,
+                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
                       formatDateOnly(h.createdAt),
                     ]
                       .filter(Boolean)
