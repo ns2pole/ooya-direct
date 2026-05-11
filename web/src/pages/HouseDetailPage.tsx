@@ -216,7 +216,7 @@ export function HouseDetailPage() {
       <section className="stack-lg" aria-labelledby="inquiries-heading">
         <h2 id="inquiries-heading">公開の問い合わせ</h2>
         <p className="muted small">
-          メルカリの商品コメントのように、誰でも閲覧できます。個人情報（電話・メール・住所など）は書かないでください。
+          下記の問い合わせ板は誰でも閲覧可能です。個人情報の記載には十分ご配慮下さい。
         </p>
 
         {inquiries.length === 0 ? (
@@ -236,7 +236,7 @@ export function HouseDetailPage() {
         )}
 
         <form className="stack" onSubmit={onSubmitInquiry}>
-          <h3>問い合わせを送る（ログイン不要）</h3>
+          <h3>問い合わせを送る</h3>
           <label className="field">
             <span>表示名（任意）</span>
             <input
