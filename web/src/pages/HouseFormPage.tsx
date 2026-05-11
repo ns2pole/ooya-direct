@@ -15,12 +15,14 @@ import {
   uploadHouseCoverImage,
 } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export function HouseFormPage() {
   const { houseId } = useParams();
   const isNew = houseId === undefined;
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -123,6 +125,7 @@ export function HouseFormPage() {
             updatedAt: serverTimestamp(),
           });
         }
+        showToast('物件を登録しました。', 'success');
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
         const payload: Record<string, unknown> = {
@@ -134,10 +137,13 @@ export function HouseFormPage() {
           payload.photoUrl = await uploadHouseCoverImage(houseId, coverFile);
         }
         await updateDoc(doc(getDb(), 'houses', houseId), payload);
+        showToast('保存しました。', 'success');
         navigate('/landlord');
       }
     } catch (err) {
-      setError(messageForHouseFormSaveError(err));
+      const msg = messageForHouseFormSaveError(err);
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setSaving(false);
     }
