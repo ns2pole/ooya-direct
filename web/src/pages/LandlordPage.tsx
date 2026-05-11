@@ -12,7 +12,8 @@ import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { House } from '../types';
-import { formatDate } from '../format';
+import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { formatDateOnly } from '../format';
 
 function messageForAuthCode(code: string): string {
   switch (code) {
@@ -37,21 +38,6 @@ function messageForAuthCode(code: string): string {
     default:
       return 'ログインに失敗しました。';
   }
-}
-
-function mapHouse(id: string, data: Record<string, unknown>): House {
-  const rawPhoto = data.photoUrl;
-  const photoUrl =
-    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
-  return {
-    id,
-    ownerId: String(data.ownerId ?? ''),
-    title: String(data.title ?? ''),
-    description: String(data.description ?? ''),
-    photoUrl,
-    createdAt: (data.createdAt as House['createdAt']) ?? null,
-    updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
-  };
 }
 
 export function LandlordPage() {
@@ -230,7 +216,16 @@ export function LandlordPage() {
                 )}
                 <div>
                   <strong>{h.title || '（無題）'}</strong>
-                  <div className="muted small">{formatDate(h.updatedAt ?? h.createdAt)}</div>
+                  <div className="muted small">
+                    {[
+                      houseLocationLine(h),
+                      h.rent ? `家賃 ${h.rent}` : '',
+                      h.areaSize,
+                      formatDateOnly(h.updatedAt ?? h.createdAt),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </div>
                 </div>
               </div>
               <div className="row">

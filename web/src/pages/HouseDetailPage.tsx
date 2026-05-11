@@ -12,22 +12,8 @@ import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import type { House, Inquiry } from '../types';
+import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { formatDate } from '../format';
-
-function mapHouse(id: string, data: Record<string, unknown>): House {
-  const rawPhoto = data.photoUrl;
-  const photoUrl =
-    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
-  return {
-    id,
-    ownerId: String(data.ownerId ?? ''),
-    title: String(data.title ?? ''),
-    description: String(data.description ?? ''),
-    photoUrl,
-    createdAt: (data.createdAt as House['createdAt']) ?? null,
-    updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
-  };
-}
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
   return {
@@ -192,6 +178,13 @@ export function HouseDetailPage() {
       </p>
       <h1>{house.title || '（無題）'}</h1>
       <p className="muted">掲載: {formatDate(house.createdAt)}</p>
+      {houseLocationLine(house) || house.rent || house.areaSize ? (
+        <p className="muted small">
+          {[houseLocationLine(house), house.rent ? `家賃 ${house.rent}` : '', house.areaSize]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      ) : null}
       {house.photoUrl ? (
         <div className="house-hero">
           <img

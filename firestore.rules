@@ -8,8 +8,19 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt'
+          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt',
+          'prefecture', 'city', 'town', 'rent', 'areaSize'
         ])
+        && request.resource.data.prefecture is string
+        && request.resource.data.prefecture.size() <= 30
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 120
+        && request.resource.data.town is string
+        && request.resource.data.town.size() <= 200
+        && request.resource.data.rent is string
+        && request.resource.data.rent.size() <= 50
+        && request.resource.data.areaSize is string
+        && request.resource.data.areaSize.size() <= 50
         && (!('photoUrl' in request.resource.data)
           || (request.resource.data.photoUrl is string
             && request.resource.data.photoUrl.size() > 0
@@ -20,8 +31,19 @@ service cloud.firestore {
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt'
+          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt',
+          'prefecture', 'city', 'town', 'rent', 'areaSize'
         ])
+        && request.resource.data.prefecture is string
+        && request.resource.data.prefecture.size() <= 30
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 120
+        && request.resource.data.town is string
+        && request.resource.data.town.size() <= 200
+        && request.resource.data.rent is string
+        && request.resource.data.rent.size() <= 50
+        && request.resource.data.areaSize is string
+        && request.resource.data.areaSize.size() <= 50
         && (!('photoUrl' in request.resource.data)
           || (request.resource.data.photoUrl is string
             && request.resource.data.photoUrl.size() > 0

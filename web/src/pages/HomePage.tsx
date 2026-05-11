@@ -3,22 +3,8 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import type { House } from '../types';
-import { formatDate } from '../format';
-
-function mapHouse(id: string, data: Record<string, unknown>): House {
-  const rawPhoto = data.photoUrl;
-  const photoUrl =
-    typeof rawPhoto === 'string' && rawPhoto.trim() !== '' ? rawPhoto.trim() : null;
-  return {
-    id,
-    ownerId: String(data.ownerId ?? ''),
-    title: String(data.title ?? ''),
-    description: String(data.description ?? ''),
-    photoUrl,
-    createdAt: (data.createdAt as House['createdAt']) ?? null,
-    updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
-  };
-}
+import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { formatDateOnly } from '../format';
 
 export function HomePage() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -113,7 +99,16 @@ export function HomePage() {
                 )}
                 <span className="house-card-main">
                   <span className="house-title">{h.title || '（無題）'}</span>
-                  <span className="muted">{formatDate(h.createdAt)}</span>
+                  <span className="muted small house-card-meta">
+                    {[
+                      houseLocationLine(h),
+                      h.rent ? `家賃 ${h.rent}` : '',
+                      h.areaSize,
+                      formatDateOnly(h.createdAt),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
                 </span>
               </Link>
             </li>

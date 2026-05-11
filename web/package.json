@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@geolonia/japanese-addresses-v2": "^0.0.5",
     "firebase": "^12.13.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

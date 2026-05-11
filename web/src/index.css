@@ -403,3 +403,40 @@ code {
   color: #fff;
   border: 1px solid #991b1b;
 }
+
+.autocomplete {
+  position: relative;
+}
+
+.autocomplete-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 0.2rem 0 0;
+  padding: 0.25rem 0;
+  max-height: 240px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.autocomplete-item {
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item--active {
+  background: #eef2ff;
+}
+
+.house-card-meta {
+  display: block;
+  margin-top: 0.15rem;
+}
