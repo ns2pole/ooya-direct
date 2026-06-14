@@ -179,10 +179,10 @@ export function HouseDetailPage() {
   return (
     <article className="panel">
       <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
-      <HousePropertyTable house={house} />
       {photos.length > 0 ? (
         <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}
+      <HousePropertyTable house={house} />
       <div className="prose">
         {house.description ? (
           <p style={{ whiteSpace: 'pre-wrap' }}>{house.description}</p>
