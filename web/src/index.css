@@ -340,19 +340,8 @@ code {
   font-weight: 600;
 }
 
-.house-carousel-location {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: var(--text);
-}
-
-.house-carousel-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+.house-carousel-body .house-property-table {
+  margin: 0.25rem 0 0.5rem;
 }
 
 .house-carousel-date {
