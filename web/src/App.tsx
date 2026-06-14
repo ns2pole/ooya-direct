@@ -1,5 +1,6 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { PageTitleProvider } from './context/PageTitleContext';
 import { ToastProvider } from './context/ToastContext';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
@@ -11,7 +12,8 @@ export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
-        <ToastProvider>
+        <PageTitleProvider>
+          <ToastProvider>
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<HomePage />} />
@@ -22,7 +24,8 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-        </ToastProvider>
+          </ToastProvider>
+        </PageTitleProvider>
       </AuthProvider>
     </HashRouter>
   );

@@ -58,16 +58,33 @@ code {
 }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1.25rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+}
+
+.app-header-page {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand {
@@ -93,14 +110,6 @@ code {
   max-width: 880px;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 3rem;
-}
-
-.app-footer {
-  padding: 1rem 1.25rem 1.5rem;
-  text-align: center;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
-  background: var(--surface);
 }
 
 .banner {
