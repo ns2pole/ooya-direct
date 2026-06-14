@@ -1,16 +1,24 @@
 import { Fragment } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useMatch } from 'react-router-dom';
 import { usePageHeaderValue } from '../context/PageTitleContext';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
 
 export function Layout() {
   const crumbs = usePageHeaderValue();
+  const isHouseDetail = Boolean(useMatch('/houses/:houseId'));
 
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header-inner">
-          <Link to="/" className="brand">
+          <div className="app-header-start">
+            {isHouseDetail ? (
+              <Link to="/" className="app-header-back">
+                ← 戻る
+              </Link>
+            ) : null}
+          </div>
+          <Link to="/" className="brand app-header-brand">
             大家ダイレクト
           </Link>
           {crumbs.length > 0 ? (
@@ -31,7 +39,9 @@ export function Layout() {
                 </Fragment>
               ))}
             </nav>
-          ) : null}
+          ) : (
+            <div className="app-header-page" aria-hidden="true" />
+          )}
         </div>
       </header>
 

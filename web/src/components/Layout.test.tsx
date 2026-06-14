@@ -39,6 +39,7 @@ describe('Layout header breadcrumbs', () => {
     );
 
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
+    expect(screen.getByRole('link', { name: '← 戻る' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('navigation', { name: '現在のページ' })).toHaveTextContent(
       'テスト物件1'
     );
@@ -46,7 +47,7 @@ describe('Layout header breadcrumbs', () => {
     expect(screen.getByText('物件詳細本文')).toBeInTheDocument();
   });
 
-  it('物件一覧ページでは 物件一覧 はリンクにならない', () => {
+  it('物件一覧ページでは戻るボタンを表示しない', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <PageTitleProvider>
@@ -59,6 +60,7 @@ describe('Layout header breadcrumbs', () => {
       </MemoryRouter>
     );
 
+    expect(screen.queryByRole('link', { name: '← 戻る' })).toBeNull();
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
     expect(screen.getByText('物件一覧')).toBeInTheDocument();
     expect(screen.getByText('一覧本文')).toBeInTheDocument();
