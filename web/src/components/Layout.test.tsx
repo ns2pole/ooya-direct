@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './Layout';
-import { PageTitleProvider, usePageHeader } from '../context/PageTitleContext';
+import { PageTitleProvider, usePageHeader, usePageHeaderEndAction } from '../context/PageTitleContext';
 import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
+import * as scrollToElement from '../lib/scrollToElement';
 
 vi.mock('../firebase', () => ({
   isFirebaseConfigured: true,
@@ -13,6 +14,17 @@ vi.mock('../firebase', () => ({
 function HouseDetailHeaderStub() {
   usePageHeader(houseDetailHeaderCrumbs({ title: 'テスト物件1' }));
   return <p>物件詳細本文</p>;
+}
+
+function HouseDetailInquiryStub() {
+  usePageHeader(houseDetailHeaderCrumbs({ title: 'テスト物件1' }));
+  usePageHeaderEndAction({ label: '問い合わせ', targetId: 'inquiry-message' });
+  return (
+    <>
+      <p>物件詳細本文</p>
+      <textarea id="inquiry-message" aria-label="メッセージ" />
+    </>
+  );
 }
 
 function HouseListHeaderStub() {
@@ -61,6 +73,25 @@ describe('Layout header breadcrumbs', () => {
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
     expect(screen.getByText('物件一覧')).toBeInTheDocument();
     expect(screen.getByText('一覧本文')).toBeInTheDocument();
+  });
+
+  it('物件詳細で問い合わせボタンを押すとメッセージ欄へスクロールする', () => {
+    const scrollSpy = vi.spyOn(scrollToElement, 'scrollToElementId').mockReturnValue(true);
+
+    render(
+      <MemoryRouter initialEntries={['/houses/abc']}>
+        <PageTitleProvider>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route path="houses/:houseId" element={<HouseDetailInquiryStub />} />
+            </Route>
+          </Routes>
+        </PageTitleProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '問い合わせ' }));
+    expect(scrollSpy).toHaveBeenCalledWith('inquiry-message');
   });
 
   it('ブランド 大家ダイレクト は常に / へのリンク', () => {

@@ -50,7 +50,7 @@ export function usePageHeaderEndAction(action: PageHeaderEndAction | null) {
     if (!setEndAction) return;
     setEndAction(action ? (JSON.parse(serialized) as PageHeaderEndAction) : null);
     return () => setEndAction(null);
-  }, [serialized, setEndAction, action]);
+  }, [serialized, setEndAction]);
 }
 
 export function usePageHeaderValue(): PageHeaderCrumb[] {

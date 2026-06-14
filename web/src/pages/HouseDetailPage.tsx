@@ -38,7 +38,7 @@ export function HouseDetailPage() {
   usePageHeader(houseDetailHeaderCrumbs(house));
   usePageHeaderEndAction(
     house !== undefined && house !== null
-      ? { label: '問い合わせする', targetId: 'inquiry-message' }
+      ? { label: '問い合わせ', targetId: 'inquiry-message' }
       : null
   );
 
