@@ -363,27 +363,13 @@ code {
   margin: 0;
 }
 
-.house-list-property-compact {
-  margin: 0.5rem 0 0;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fafbff;
-  font-size: 0.9rem;
+.house-property-row--values-only {
+  grid-template-columns: 1fr;
+}
+
+.house-property-row--values-only dd {
+  margin: 0;
   line-height: 1.5;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 0;
-}
-
-.house-list-property-compact-item {
-  white-space: nowrap;
-  font-weight: 600;
-}
-
-.house-list-property-compact-sep {
-  color: var(--muted);
-  font-weight: 400;
 }
 
 .house-property-table {
