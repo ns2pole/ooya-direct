@@ -25,7 +25,7 @@ describe('Layout header breadcrumbs', () => {
     cleanup();
   });
 
-  it('物件詳細では物件名のみ表示しリンクにならない', () => {
+  it('物件詳細ではヘッダー右に物件名を出さない', () => {
     render(
       <MemoryRouter initialEntries={['/houses/abc']}>
         <PageTitleProvider>
@@ -40,10 +40,7 @@ describe('Layout header breadcrumbs', () => {
 
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
     expect(screen.getByRole('link', { name: '← 戻る' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('navigation', { name: '現在のページ' })).toHaveTextContent(
-      'テスト物件1'
-    );
-    expect(screen.queryByRole('link', { name: 'テスト物件1' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: '現在のページ' })).toBeNull();
     expect(screen.getByText('物件詳細本文')).toBeInTheDocument();
   });
 

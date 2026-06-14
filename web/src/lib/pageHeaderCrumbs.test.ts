@@ -10,19 +10,16 @@ describe('houseDetailHeaderCrumbs', () => {
     expect(houseDetailHeaderCrumbs(null)).toEqual([{ label: '物件が見つかりません' }]);
   });
 
-  it('物件タイトルのみを返す', () => {
-    expect(houseDetailHeaderCrumbs({ title: 'テスト物件1' })).toEqual([
-      { label: 'テスト物件1' },
-    ]);
+  it('読み込み完了後はヘッダーに物件名を出さない', () => {
+    expect(houseDetailHeaderCrumbs({ title: 'テスト物件1' })).toEqual([]);
   });
 
-  it('タイトルが空のときは（無題）を使う', () => {
-    expect(houseDetailHeaderCrumbs({ title: '' })).toEqual([{ label: '（無題）' }]);
+  it('タイトルが空でも読み込み完了後はヘッダーを空にする', () => {
+    expect(houseDetailHeaderCrumbs({ title: '' })).toEqual([]);
   });
 
-  it('物件名にはリンク先がない', () => {
-    const crumbs = houseDetailHeaderCrumbs({ title: 'テスト物件1' });
-    expect(crumbs[0].to).toBeUndefined();
+  it('読み込み完了後のヘッダーにはリンク先がない', () => {
+    expect(houseDetailHeaderCrumbs({ title: 'テスト物件1' })).toEqual([]);
   });
 });
 

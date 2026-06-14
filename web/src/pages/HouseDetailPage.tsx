@@ -178,7 +178,10 @@ export function HouseDetailPage() {
 
   return (
     <article className="panel">
-      <p className="muted house-detail-date">掲載: {formatDateOnly(house.createdAt)}</p>
+      <p className="house-detail-meta">
+        <span className="house-detail-title">{house.title.trim() || '（無題）'}</span>
+        <span className="house-detail-date muted">掲載: {formatDateOnly(house.createdAt)}</span>
+      </p>
       {photos.length > 0 ? (
         <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}

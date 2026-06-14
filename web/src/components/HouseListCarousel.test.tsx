@@ -69,12 +69,13 @@ describe('HouseListCarousel', () => {
 
     expect(screen.getByText('家賃')).toBeInTheDocument();
     expect(screen.getByText('6万円')).toBeInTheDocument();
+    expect(screen.getByText('地域')).toBeInTheDocument();
+    expect(screen.getByText('三重県 名張市 テスト町')).toBeInTheDocument();
     expect(screen.getByText('3LDK')).toBeInTheDocument();
     expect(screen.queryByText('間取り')).not.toBeInTheDocument();
     expect(screen.queryByText('階建')).not.toBeInTheDocument();
     expect(screen.queryByText('築年数')).not.toBeInTheDocument();
     expect(screen.queryByText('ジャンル')).not.toBeInTheDocument();
-    expect(screen.queryByText('地域')).not.toBeInTheDocument();
   });
 
   it('カード全体が詳細ページへのリンク', () => {

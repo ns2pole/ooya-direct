@@ -99,9 +99,13 @@ export function housePropertyDetailRows(h: House): DetailRow[] {
   return rows;
 }
 
-/** 物件一覧カルーセル用: 家賃等は行、間取り・階建・築年数は1行にまとめる */
+/** 物件一覧カルーセル用: 地域→家賃等は行、間取り・階建・築年数は1行にまとめる */
 export function housePropertyListSummary(h: House): HouseListPropertySummary {
   const rows: DetailRow[] = [];
+  const location = houseLocationLine(h);
+  if (location) {
+    rows.push({ label: '地域', value: location });
+  }
   for (const key of LIST_ROW_KEYS) {
     const row = rowIfValue(labelForKey(key), h[key]);
     if (row) rows.push(row);

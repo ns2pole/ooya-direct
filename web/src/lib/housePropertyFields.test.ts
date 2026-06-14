@@ -62,9 +62,10 @@ describe('housePropertyDetailRows', () => {
 });
 
 describe('housePropertyListSummary', () => {
-  it('一覧用に家賃行とコンパクト行を返す', () => {
+  it('一覧用に地域・家賃行とコンパクト行を返す', () => {
     expect(housePropertyListSummary(mockHouse())).toEqual({
       rows: [
+        { label: '地域', value: '三重県 名張市 桔梗が丘一番町' },
         { label: '家賃', value: '6万円' },
         { label: '管理費等', value: '5000円' },
         { label: '敷/礼', value: '1ヶ月/1ヶ月' },
@@ -81,12 +82,12 @@ describe('housePropertyListSummary', () => {
     ).toEqual(['5LDK', '築15年']);
   });
 
-  it('ジャンル・面積・地域は含めない', () => {
+  it('ジャンル・面積は含めない', () => {
     const summary = housePropertyListSummary(mockHouse());
     const labels = summary.rows.map((r) => r.label);
     expect(labels).not.toContain('ジャンル');
     expect(labels).not.toContain('面積');
-    expect(labels).not.toContain('地域');
+    expect(labels).toContain('地域');
   });
 });
 

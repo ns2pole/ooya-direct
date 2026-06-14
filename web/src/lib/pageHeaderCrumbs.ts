@@ -9,7 +9,7 @@ export function houseDetailHeaderCrumbs(house: HouseDetailHeaderInput): PageHead
   if (house === null) {
     return [{ label: '物件が見つかりません' }];
   }
-  return [{ label: house.title || '（無題）' }];
+  return [];
 }
 
 export function houseFormHeaderCrumbs(isNew: boolean): PageHeaderCrumb[] {
