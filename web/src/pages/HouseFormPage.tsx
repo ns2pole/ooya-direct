@@ -1,14 +1,6 @@
 import type { SinglePrefecture } from '@geolonia/japanese-addresses-v2';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  addDoc,
-  collection,
-  deleteField,
-  doc,
-  getDoc,
-  serverTimestamp,
-  updateDoc,
-} from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   findPrefecture,
@@ -19,22 +11,19 @@ import {
 } from '../address/geolonia';
 import { AutocompleteSelect } from '../components/AutocompleteSelect';
 import { AREA_SIZE_OPTIONS } from '../constants/areaSizeOptions';
+import { getDb, isFirebaseConfigured, messageForHouseFormSaveError } from '../firebase';
 import {
-  getDb,
-  isFirebaseConfigured,
-  messageForHouseFormSaveError,
-} from '../firebase';
-import {
-  coverPhotoField,
   loadHousePhotosForDisplay,
-  legacyPhotoUrlsFromHouse,
   MAX_HOUSE_PHOTOS,
-  saveHousePhotos,
+  progressStepLabel,
+  saveHouseWithPhotos,
 } from '../lib/housePhotos';
 import { imageFileHint, isAllowedImageFile } from '../lib/imageFile';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
+
+type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
 export function HouseFormPage() {
   const { houseId } = useParams();
@@ -57,13 +46,13 @@ export function HouseFormPage() {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveStatusMessage, setSaveStatusMessage] = useState('');
+
   const pendingPhotosRef = useRef(pendingPhotos);
   const existingPhotosRef = useRef(existingPhotos);
   const removedPhotoIdsRef = useRef(removedPhotoIds);
   const loadedHouseIdRef = useRef<string | null>(null);
-  pendingPhotosRef.current = pendingPhotos;
-  existingPhotosRef.current = existingPhotos;
-  removedPhotoIdsRef.current = removedPhotoIds;
 
   const [prefsData, setPrefsData] = useState<SinglePrefecture[] | null>(null);
   const [prefList, setPrefList] = useState<string[]>([]);
@@ -82,6 +71,29 @@ export function HouseFormPage() {
   const townList = townKey ? (townCache[townKey] ?? []) : [];
 
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+  function textFields() {
+    return {
+      title,
+      description,
+      prefecture,
+      city,
+      town,
+      rent,
+      areaSize,
+    };
+  }
+
+  function showValidationError(msg: string) {
+    setFormError(msg);
+    setSaveStatus('error');
+    setSaveStatusMessage(msg);
+  }
+
+  function resetSaveStatus() {
+    setSaveStatus('idle');
+    setSaveStatusMessage('');
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -151,19 +163,6 @@ export function HouseFormPage() {
           return;
         }
         const photos = await loadHousePhotosForDisplay(houseId, data);
-        const legacyUrls = legacyPhotoUrlsFromHouse(data);
-        if (
-          photos.length > 0 &&
-          (legacyUrls.length > 0 || typeof data.coverPhotoUrl !== 'string')
-        ) {
-          await updateDoc(doc(getDb(), 'houses', houseId), {
-            ...coverPhotoField(photos),
-            ...(legacyUrls.length > 0
-              ? { photoUrl: deleteField(), photoUrls: deleteField() }
-              : {}),
-            updatedAt: serverTimestamp(),
-          });
-        }
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
@@ -177,13 +176,18 @@ export function HouseFormPage() {
             pendingPhotosRef.current.forEach(({ previewUrl }) =>
               URL.revokeObjectURL(previewUrl)
             );
+            pendingPhotosRef.current = [];
             setPendingPhotos([]);
-            setRemovedPhotoIds(new Set());
+            const emptyRemoved = new Set<string>();
+            removedPhotoIdsRef.current = emptyRemoved;
+            setRemovedPhotoIds(emptyRemoved);
             loadedHouseIdRef.current = houseId;
           }
+          existingPhotosRef.current = photos;
           setExistingPhotos(photos);
           setLoadError(null);
           setFormError(null);
+          resetSaveStatus();
         }
       } catch (e) {
         if (!cancelled) {
@@ -218,13 +222,13 @@ export function HouseFormPage() {
     for (const file of Array.from(files)) {
       if (!isAllowedImageFile(file)) {
         const msg = `画像ファイル（${imageFileHint()}）を選んでください。`;
-        setFormError(msg);
+        showValidationError(msg);
         showToast(msg, 'error');
         return;
       }
       if (file.size > MAX_IMAGE_BYTES) {
         const msg = '画像は 5MB 以下にしてください。';
-        setFormError(msg);
+        showValidationError(msg);
         showToast(msg, 'error');
         return;
       }
@@ -235,13 +239,18 @@ export function HouseFormPage() {
     if (nextTotal > MAX_HOUSE_PHOTOS) {
       additions.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
       const msg = `写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`;
-      setFormError(msg);
+      showValidationError(msg);
       showToast(msg, 'error');
       return;
     }
 
     setFormError(null);
-    setPendingPhotos((prev) => [...prev, ...additions]);
+    resetSaveStatus();
+    setPendingPhotos((prev) => {
+      const next = [...prev, ...additions];
+      pendingPhotosRef.current = next;
+      return next;
+    });
     showToast(
       `${additions.length}枚追加しました。下の「保存」ボタンを押すと登録されます。`,
       'success'
@@ -249,7 +258,12 @@ export function HouseFormPage() {
   }
 
   function removeExistingPhoto(photoId: string) {
-    setRemovedPhotoIds((prev) => new Set(prev).add(photoId));
+    setRemovedPhotoIds((prev) => {
+      const next = new Set(prev).add(photoId);
+      removedPhotoIdsRef.current = next;
+      return next;
+    });
+    resetSaveStatus();
   }
 
   function removePendingPhoto(index: number) {
@@ -257,103 +271,132 @@ export function HouseFormPage() {
       const next = [...prev];
       const [removed] = next.splice(index, 1);
       if (removed) URL.revokeObjectURL(removed.previewUrl);
+      pendingPhotosRef.current = next;
       return next;
     });
+    resetSaveStatus();
   }
 
   function clearPendingPhotos() {
     setPendingPhotos((prev) => {
       prev.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      pendingPhotosRef.current = [];
       return [];
     });
   }
 
   function applySavedPhotos(photos: HousePhoto[]) {
+    existingPhotosRef.current = photos;
     setExistingPhotos(photos);
-    setRemovedPhotoIds(new Set());
+    const emptyRemoved = new Set<string>();
+    removedPhotoIdsRef.current = emptyRemoved;
+    setRemovedPhotoIds(emptyRemoved);
     clearPendingPhotos();
-  }
-
-  function houseUpdatePayload(savedPhotos: HousePhoto[]): Record<string, unknown> {
-    return {
-      ...houseTextFields(),
-      photoUrl: deleteField(),
-      photoUrls: deleteField(),
-      ...(savedPhotos.length > 0
-        ? { coverPhotoUrl: savedPhotos[0].url }
-        : { coverPhotoUrl: deleteField() }),
-      updatedAt: serverTimestamp(),
-    };
-  }
-
-  function houseTextFields(): Record<string, unknown> {
-    return {
-      title: title.trim(),
-      description: description.trim(),
-      prefecture: prefecture.trim(),
-      city: city.trim(),
-      town: town.trim(),
-      rent: rent.trim(),
-      areaSize: areaSize.trim(),
-    };
   }
 
   function saveSuccessMessage(photoCount: number): string {
     if (photoCount > 0) {
-      return `保存しました（写真 ${photoCount} 枚）。`;
+      return `保存完了（写真 ${photoCount} 枚）`;
     }
-    return '保存しました。';
+    return '保存完了';
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  function onFormInvalid(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!user || !isFirebaseConfigured) return;
+    showValidationError('入力内容を確認してください（タイトルは必須です）。');
+  }
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    if (!form.reportValidity()) {
+      showValidationError('入力内容を確認してください（タイトルは必須です）。');
+      return;
+    }
+
+    if (!user) {
+      showValidationError('ログインが必要です。再度ログインしてください。');
+      return;
+    }
+
+    if (!isFirebaseConfigured) {
+      showValidationError('Firebase が未設定です。環境変数を確認してください。');
+      return;
+    }
+
     setSaving(true);
     setFormError(null);
-    try {
-      const pendingFiles = pendingPhotosRef.current.map((p) => p.file);
-      const removedIds = removedPhotoIdsRef.current;
-      const photoChanged = removedIds.size > 0 || pendingFiles.length > 0;
+    setSaveStatus('saving');
+    setSaveStatusMessage('保存を開始しています…');
 
+    const pendingFiles = pendingPhotosRef.current.map((p) => p.file);
+    const removedIds = removedPhotoIdsRef.current;
+    const photoChanged = removedIds.size > 0 || pendingFiles.length > 0;
+
+    try {
       if (isNew) {
         const ref = await addDoc(collection(getDb(), 'houses'), {
           ownerId: user.uid,
-          ...houseTextFields(),
+          title: title.trim(),
+          description: description.trim(),
+          prefecture: prefecture.trim(),
+          city: city.trim(),
+          town: town.trim(),
+          rent: rent.trim(),
+          areaSize: areaSize.trim(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+
         let saved: HousePhoto[] = [];
-        if (pendingFiles.length > 0) {
-          saved = await saveHousePhotos(ref.id, {
+        if (photoChanged) {
+          saved = await saveHouseWithPhotos({
+            houseId: ref.id,
+            ownerId: user.uid,
+            textFields: textFields(),
             existing: [],
             removedIds: new Set(),
             pendingFiles,
+            photoChanged: true,
+            onProgress: (step, detail) => {
+              setSaveStatusMessage(progressStepLabel(step, detail));
+            },
           });
-          await updateDoc(doc(getDb(), 'houses', ref.id), houseUpdatePayload(saved));
         }
-        showToast(
+
+        const msg =
           saved.length > 0
-            ? `物件を登録しました（写真 ${saved.length} 枚）。`
-            : '物件を登録しました。',
-          'success'
-        );
+            ? `物件を登録しました（写真 ${saved.length} 枚）`
+            : '物件を登録しました';
+        setSaveStatus('success');
+        setSaveStatusMessage(msg);
+        showToast(msg, 'success');
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
-        let saved = existingPhotosRef.current.filter((p) => !removedIds.has(p.id));
-        if (photoChanged) {
-          saved = await saveHousePhotos(houseId, {
-            existing: existingPhotosRef.current,
-            removedIds,
-            pendingFiles,
-          });
-        }
-        await updateDoc(doc(getDb(), 'houses', houseId), houseUpdatePayload(saved));
+        const saved = await saveHouseWithPhotos({
+          houseId,
+          ownerId: user.uid,
+          textFields: textFields(),
+          existing: existingPhotosRef.current,
+          removedIds,
+          pendingFiles,
+          photoChanged,
+          onProgress: (step, detail) => {
+            setSaveStatusMessage(progressStepLabel(step, detail));
+          },
+        });
         applySavedPhotos(saved);
-        showToast(saveSuccessMessage(saved.length), 'success');
+        const msg = saveSuccessMessage(saved.length);
+        setSaveStatus('success');
+        setSaveStatusMessage(msg);
+        showToast(msg, 'success');
       }
     } catch (err) {
       const msg = messageForHouseFormSaveError(err);
       setFormError(msg);
+      setSaveStatus('error');
+      setSaveStatusMessage(msg);
       showToast(msg, 'error');
     } finally {
       setSaving(false);
@@ -406,7 +449,12 @@ export function HouseFormPage() {
       </p>
       <h1>{isNew ? '物件の新規登録' : '物件の編集'}</h1>
 
-      <form className="stack" onSubmit={(e) => void onSubmit(e)}>
+      <form
+        className="stack"
+        onSubmit={(e) => void onSubmit(e)}
+        onInvalid={onFormInvalid}
+        noValidate={false}
+      >
         <label className="field">
           <span>タイトル</span>
           <input
@@ -537,6 +585,17 @@ export function HouseFormPage() {
             </ul>
           ) : null}
         </div>
+
+        {saveStatus !== 'idle' ? (
+          <div
+            className={`save-status save-status--${saveStatus}`}
+            role="status"
+            aria-live="polite"
+          >
+            {saveStatusMessage}
+          </div>
+        ) : null}
+
         {formError ? <p className="text-error">{formError}</p> : null}
         {pendingPhotoCount > 0 ? (
           <p className="text-success small" style={{ margin: 0 }}>

@@ -109,6 +109,30 @@ VITE_BASE=/ooya-direct/ npm run build
 
 旧データの `photoUrl` / `photoUrls`（配列）は、編集・詳細表示時に自動で `photos` サブコレクションへ移行されます。
 
+## 物件写真の保存手順（大家・編集画面）
+
+写真は **ファイル選択だけでは保存されません**。必ず **「保存」ボタン** を押してください。
+
+1. 大家ログイン → **マイ物件** → 物件の **編集**（または新規登録）
+2. **写真** の「ファイルを選択」で 1 枚以上選ぶ → プレビューに **「新規」** バッジが付く
+3. フォーム下部の **「保存」** をクリック
+4. 保存ボタンの上に **ステータス欄** が表示される:
+   - 青: 「画像をアップロード中…」→「photos へ保存中…」→「物件情報を保存中…」
+   - 緑: **「保存完了（写真 N 枚）」**
+   - 赤: 失敗したステップとエラー全文（例: Storage 拒否、photos への書き込み拒否）
+5. **Firebase コンソール** で確認:
+   - **Firestore** → `houses` → 対象 `{houseId}` → **サブコレクション `photos`**
+   - 1 枚ごとにドキュメントが増え、`url` / `order` / `createdAt` が入っている
+   - 親ドキュメントの `coverPhotoUrl` は先頭写真の URL（一覧サムネ用）
+6. **公開ページ**（物件詳細）で 2 枚以上なら ‹ › と `2 / N` 表示
+
+**うまくいかないとき**
+
+- タイトル未入力だと HTML バリデーションで保存が始まらない → ステータス欄に「タイトルは必須」と出る
+- ファイル選択後すぐ保存しても、プレビュー（新規バッジ）が出ていれば保存対象に含まれる
+- `photos` が空のまま → [`firestore.rules`](firestore.rules) を `firebase deploy --only firestore:rules` で再デプロイ
+- Storage エラー → 下記「Storage: storage/unauthorized」を参照
+
 ## トラブルシューティング（Storage の `storage/unauthorized` と Safari の Firestore）
 
 ### Storage: `User does not have permission` / `storage/unauthorized`
