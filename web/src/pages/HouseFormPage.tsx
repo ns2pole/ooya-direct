@@ -21,7 +21,7 @@ import {
 } from '../lib/housePhotos';
 import { releasePhotoPreviewUrl, type PendingPhotoEntry } from '../lib/photoFileSelection';
 import { useAuth } from '../context/AuthContext';
-import { usePageTitle } from '../context/PageTitleContext';
+import { usePageHeader } from '../context/PageTitleContext';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
 
@@ -34,7 +34,10 @@ type EditNavState = {
 export function HouseFormPage() {
   const { houseId } = useParams();
   const isNew = houseId === undefined;
-  usePageTitle(isNew ? '物件の新規登録' : '物件の編集');
+  usePageHeader([
+    { label: 'マイ物件', to: '/landlord' },
+    { label: isNew ? '新規登録' : '編集' },
+  ]);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
@@ -472,12 +475,6 @@ export function HouseFormPage() {
 
   return (
     <section className="panel stack-lg">
-      <p className="breadcrumb">
-        <Link to="/landlord">マイ物件</Link>
-        <span aria-hidden="true"> / </span>
-        <span>{isNew ? '新規登録' : '編集'}</span>
-      </p>
-
       <form
         className="stack"
         onSubmit={(e) => void onSubmit(e)}

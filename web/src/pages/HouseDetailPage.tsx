@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   collection,
   doc,
@@ -17,13 +17,12 @@ import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate } from '../format';
-import { usePageTitle } from '../context/PageTitleContext';
+import { usePageHeader } from '../context/PageTitleContext';
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
   return {
     id,
     message: String(data.message ?? ''),
-    displayName: data.displayName == null ? null : String(data.displayName),
     createdAt: (data.createdAt as Inquiry['createdAt']) ?? null,
   };
 }
@@ -35,12 +34,18 @@ export function HouseDetailPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const pageTitle =
-    house === undefined ? '物件詳細' : house === null ? '物件が見つかりません' : house.title || '（無題）';
-  usePageTitle(pageTitle);
+  const headerCrumbs = useMemo(() => {
+    if (house === undefined) {
+      return [{ label: '物件一覧', to: '/' }, { label: '物件詳細' }];
+    }
+    if (house === null) {
+      return [{ label: '物件一覧', to: '/' }, { label: '物件が見つかりません' }];
+    }
+    return [{ label: '物件一覧', to: '/' }, { label: house.title || '（無題）' }];
+  }, [house]);
+  usePageHeader(headerCrumbs);
 
   const [message, setMessage] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitOk, setSubmitOk] = useState(false);
@@ -105,16 +110,14 @@ export function HouseDetailPage() {
     setSubmitOk(false);
     try {
       const fn = httpsCallable<
-        { houseId: string; message: string; displayName?: string | null },
+        { houseId: string; message: string },
         { inquiryId: string }
       >(getFns(), 'submitInquiry');
       await fn({
         houseId,
         message: message.trim(),
-        displayName: displayName.trim() || null,
       });
       setMessage('');
-      setDisplayName('');
       setSubmitOk(true);
 
       const iq = query(
@@ -183,11 +186,6 @@ export function HouseDetailPage() {
 
   return (
     <article className="panel">
-      <p className="breadcrumb">
-        <Link to="/">物件一覧</Link>
-        <span aria-hidden="true"> / </span>
-        <span>{house.title || '物件詳細'}</span>
-      </p>
       <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
       {houseLocationLine(house) ||
       house.rent ||
@@ -217,15 +215,6 @@ export function HouseDetailPage() {
         <form className="stack" onSubmit={onSubmitInquiry}>
           <h2 id="inquiries-heading">問い合わせを送る</h2>
           <label className="field">
-            <span>表示名（任意）</span>
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              maxLength={80}
-              autoComplete="nickname"
-            />
-          </label>
-          <label className="field">
             <span>メッセージ</span>
             <textarea
               value={message}
@@ -253,7 +242,6 @@ export function HouseDetailPage() {
             {inquiries.map((q) => (
               <li key={q.id} className="inquiry-item">
                 <div className="inquiry-meta">
-                  <strong>{q.displayName || '匿名'}</strong>
                   <span className="muted">{formatDate(q.createdAt)}</span>
                 </div>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{q.message}</p>

@@ -36,6 +36,5 @@ export type House = {
 export type Inquiry = {
   id: string;
   message: string;
-  displayName: string | null;
   createdAt: Timestamp | null;
 };

@@ -5,14 +5,12 @@ admin.initializeApp();
 
 const REGION = "asia-northeast1";
 const MAX_MESSAGE = 2000;
-const MAX_DISPLAY_NAME = 80;
 /** スパム緩和: 物件あたりの問い合わせ上限（この件数に達すると新規投稿不可） */
 const MAX_INQUIRIES_PER_HOUSE = 100;
 
 type SubmitInquiryInput = {
   houseId?: unknown;
   message?: unknown;
-  displayName?: unknown;
 };
 
 export const submitInquiry = onCall(
@@ -23,8 +21,6 @@ export const submitInquiry = onCall(
       typeof data.houseId === "string" ? data.houseId.trim() : "";
     const message =
       typeof data.message === "string" ? data.message.trim() : "";
-    const displayNameRaw =
-      typeof data.displayName === "string" ? data.displayName.trim() : "";
 
     if (!houseId) {
       throw new HttpsError("invalid-argument", "houseId が必要です。");
@@ -37,17 +33,6 @@ export const submitInquiry = onCall(
         "invalid-argument",
         `メッセージは ${MAX_MESSAGE} 文字以内にしてください。`
       );
-    }
-
-    let displayName: string | null = null;
-    if (displayNameRaw) {
-      if (displayNameRaw.length > MAX_DISPLAY_NAME) {
-        throw new HttpsError(
-          "invalid-argument",
-          `表示名は ${MAX_DISPLAY_NAME} 文字以内にしてください。`
-        );
-      }
-      displayName = displayNameRaw;
     }
 
     const db = admin.firestore();
@@ -69,7 +54,6 @@ export const submitInquiry = onCall(
 
     const docRef = await inquiriesColl.add({
       message,
-      displayName,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 

@@ -1,9 +1,10 @@
+import { Fragment } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { usePageTitleValue } from '../context/PageTitleContext';
+import { usePageHeaderValue } from '../context/PageTitleContext';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
 
 export function Layout() {
-  const pageTitle = usePageTitleValue();
+  const crumbs = usePageHeaderValue();
 
   return (
     <div className="app-shell">
@@ -12,7 +13,25 @@ export function Layout() {
           <Link to="/" className="brand">
             物件ダイレクト
           </Link>
-          {pageTitle ? <span className="app-header-page">{pageTitle}</span> : null}
+          {crumbs.length > 0 ? (
+            <nav className="app-header-page" aria-label="現在のページ">
+              {crumbs.map((crumb, index) => (
+                <Fragment key={`${crumb.to ?? ''}-${crumb.label}`}>
+                  {index > 0 ? (
+                    <span className="app-header-sep" aria-hidden="true">
+                      {' '}
+                      /{' '}
+                    </span>
+                  ) : null}
+                  {crumb.to ? (
+                    <Link to={crumb.to}>{crumb.label}</Link>
+                  ) : (
+                    <span>{crumb.label}</span>
+                  )}
+                </Fragment>
+              ))}
+            </nav>
+          ) : null}
         </div>
       </header>
 

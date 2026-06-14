@@ -1,27 +1,37 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+export type PageHeaderCrumb = {
+  label: string;
+  to?: string;
+};
+
 type PageTitleContextValue = {
-  title: string;
-  setTitle: (title: string) => void;
+  crumbs: PageHeaderCrumb[];
+  setCrumbs: (crumbs: PageHeaderCrumb[]) => void;
 };
 
 const PageTitleContext = createContext<PageTitleContextValue | null>(null);
 
 export function PageTitleProvider({ children }: { children: ReactNode }) {
-  const [title, setTitle] = useState('');
-  const value = useMemo(() => ({ title, setTitle }), [title]);
+  const [crumbs, setCrumbs] = useState<PageHeaderCrumb[]>([]);
+  const value = useMemo(() => ({ crumbs, setCrumbs }), [crumbs]);
   return <PageTitleContext.Provider value={value}>{children}</PageTitleContext.Provider>;
 }
 
-export function usePageTitle(pageTitle: string) {
+export function usePageHeader(crumbs: PageHeaderCrumb[]) {
   const ctx = useContext(PageTitleContext);
+  const serialized = JSON.stringify(crumbs);
   useEffect(() => {
     if (!ctx) return;
-    ctx.setTitle(pageTitle);
-    return () => ctx.setTitle('');
-  }, [pageTitle, ctx]);
+    ctx.setCrumbs(JSON.parse(serialized) as PageHeaderCrumb[]);
+    return () => ctx.setCrumbs([]);
+  }, [serialized, ctx]);
 }
 
-export function usePageTitleValue(): string {
-  return useContext(PageTitleContext)?.title ?? '';
+export function usePageTitle(pageTitle: string) {
+  usePageHeader([{ label: pageTitle }]);
+}
+
+export function usePageHeaderValue(): PageHeaderCrumb[] {
+  return useContext(PageTitleContext)?.crumbs ?? [];
 }
