@@ -517,36 +517,10 @@ code {
   font-weight: 600;
 }
 
-.house-detail-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.house-detail-head h1 {
-  margin: 0;
-  min-width: 0;
-}
-
 .house-detail-date {
-  flex-shrink: 0;
-  margin: 0;
+  margin: 0 0 0.5rem;
   font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-@media (max-width: 540px) {
-  .house-detail-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-
-  .house-detail-date {
-    white-space: normal;
-  }
+  text-align: right;
 }
 
 .landlord-row {

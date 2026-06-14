@@ -17,6 +17,7 @@ import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate } from '../format';
+import { usePageTitle } from '../context/PageTitleContext';
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
   return {
@@ -33,6 +34,10 @@ export function HouseDetailPage() {
   const [photos, setPhotos] = useState<HousePhoto[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const pageTitle =
+    house === undefined ? '物件詳細' : house === null ? '物件が見つかりません' : house.title || '（無題）';
+  usePageTitle(pageTitle);
 
   const [message, setMessage] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -171,7 +176,6 @@ export function HouseDetailPage() {
   if (house === null) {
     return (
       <section className="panel">
-        <h1>物件が見つかりません</h1>
         <Link to="/">物件一覧へ</Link>
       </section>
     );
@@ -184,10 +188,7 @@ export function HouseDetailPage() {
         <span aria-hidden="true"> / </span>
         <span>{house.title || '物件詳細'}</span>
       </p>
-      <div className="house-detail-head">
-        <h1>{house.title || '（無題）'}</h1>
-        <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
-      </div>
+      <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
       {houseLocationLine(house) ||
       house.rent ||
       (house.areaSize && isKnownLayoutAreaSize(house.areaSize)) ? (

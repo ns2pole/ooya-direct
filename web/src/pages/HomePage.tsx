@@ -6,8 +6,10 @@ import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
 import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
+import { usePageTitle } from '../context/PageTitleContext';
 
 export function HomePage() {
+  usePageTitle('物件一覧');
   const [houses, setHouses] = useState<House[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,6 @@ export function HomePage() {
   if (!isFirebaseConfigured) {
     return (
       <section className="panel">
-        <h1>物件一覧</h1>
         <p>Firebase を設定すると一覧が表示されます。</p>
       </section>
     );
@@ -57,7 +58,6 @@ export function HomePage() {
   if (loading) {
     return (
       <section className="panel">
-        <h1>物件一覧</h1>
         <p>読み込み中…</p>
       </section>
     );
@@ -66,7 +66,6 @@ export function HomePage() {
   if (error) {
     return (
       <section className="panel">
-        <h1>物件一覧</h1>
         <p className="text-error">{error}</p>
       </section>
     );
@@ -74,7 +73,6 @@ export function HomePage() {
 
   return (
     <section className="panel">
-      <h1>物件一覧</h1>
       {houses.length === 0 ? (
         <div className="stack">
           <p>まだ物件がありません。</p>

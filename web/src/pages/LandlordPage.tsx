@@ -16,6 +16,7 @@ import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
 import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
+import { usePageTitle } from '../context/PageTitleContext';
 
 function messageForAuthCode(code: string): string {
   switch (code) {
@@ -44,6 +45,7 @@ function messageForAuthCode(code: string): string {
 
 export function LandlordPage() {
   const { user, loading, signInWithEmailPassword, signOutUser } = useAuth();
+  usePageTitle(user ? 'マイ物件' : '大家さん');
   const [houses, setHouses] = useState<House[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -118,7 +120,6 @@ export function LandlordPage() {
   if (!isFirebaseConfigured) {
     return (
       <section className="panel">
-        <h1>大家さん</h1>
         <p>Firebase を設定するとログインできます。</p>
       </section>
     );
@@ -127,7 +128,6 @@ export function LandlordPage() {
   if (loading) {
     return (
       <section className="panel">
-        <h1>大家さん</h1>
         <p>認証状態を確認中…</p>
       </section>
     );
@@ -136,7 +136,6 @@ export function LandlordPage() {
   if (!user) {
     return (
       <section className="panel stack">
-        <h1>大家さん</h1>
         <p>ログイン ID とパスワードで、自分の物件を登録・編集できます。</p>
         <p className="muted small">
           Firebase コンソールで Authentication のメール/パスワードを有効化し、大家用ユーザーを作成してください。
@@ -175,14 +174,11 @@ export function LandlordPage() {
 
   return (
     <section className="panel stack-lg">
-      <div className="row spread">
-        <h1>マイ物件</h1>
-        <div className="row">
-          <span className="muted small">{user.email}</span>
-          <button type="button" className="btn ghost" onClick={() => void signOutUser()}>
-            ログアウト
-          </button>
-        </div>
+      <div className="row">
+        <span className="muted small">{user.email}</span>
+        <button type="button" className="btn ghost" onClick={() => void signOutUser()}>
+          ログアウト
+        </button>
       </div>
 
       <div className="row">
