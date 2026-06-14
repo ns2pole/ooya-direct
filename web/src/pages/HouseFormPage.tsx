@@ -1,7 +1,7 @@
 import type { SinglePrefecture } from '@geolonia/japanese-addresses-v2';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   findPrefecture,
   getCityNamesForPrefecture,
@@ -13,22 +13,28 @@ import { AutocompleteSelect } from '../components/AutocompleteSelect';
 import { AREA_SIZE_OPTIONS } from '../constants/areaSizeOptions';
 import { getDb, isFirebaseConfigured, messageForHouseFormSaveError } from '../firebase';
 import {
+  listHousePhotos,
   loadHousePhotosForDisplay,
   MAX_HOUSE_PHOTOS,
   progressStepLabel,
   saveHouseWithPhotos,
 } from '../lib/housePhotos';
-import { imageFileHint, isAllowedImageFile } from '../lib/imageFile';
+import { imageFileHint, isAllowedImageFile, readImagePreviewUrl } from '../lib/imageFile';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
 
+type EditNavState = {
+  photosAfterSave?: HousePhoto[];
+};
+
 export function HouseFormPage() {
   const { houseId } = useParams();
   const isNew = houseId === undefined;
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
 
@@ -70,7 +76,33 @@ export function HouseFormPage() {
   const townKey = prefecture && city ? `${prefecture}\t${city}` : '';
   const townList = townKey ? (townCache[townKey] ?? []) : [];
 
+  function pendingSources(): { file: File; previewUrl: string }[] {
+    if (pendingPhotosRef.current.length >= pendingPhotos.length) {
+      return pendingPhotosRef.current;
+    }
+    return pendingPhotos.length > 0 ? pendingPhotos : pendingPhotosRef.current;
+  }
+
+  function getPendingFiles(): File[] {
+    return pendingSources().map((p) => p.file);
+  }
+
+  function releasePreviewUrl(previewUrl: string) {
+    if (previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  }
+
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+  function applyPhotosToForm(photos: HousePhoto[]) {
+    existingPhotosRef.current = photos;
+    setExistingPhotos(photos);
+    const emptyRemoved = new Set<string>();
+    removedPhotoIdsRef.current = emptyRemoved;
+    setRemovedPhotoIds(emptyRemoved);
+    clearPendingPhotos();
+  }
 
   function textFields() {
     return {
@@ -163,6 +195,8 @@ export function HouseFormPage() {
           return;
         }
         const photos = await loadHousePhotosForDisplay(houseId, data);
+        const navPhotos = (location.state as EditNavState | null)?.photosAfterSave;
+        const displayPhotos = navPhotos?.length ? navPhotos : photos;
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
@@ -173,9 +207,7 @@ export function HouseFormPage() {
           const rawArea = String(data.areaSize ?? '').trim();
           setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
           if (loadedHouseIdRef.current !== houseId) {
-            pendingPhotosRef.current.forEach(({ previewUrl }) =>
-              URL.revokeObjectURL(previewUrl)
-            );
+            pendingPhotosRef.current.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
             pendingPhotosRef.current = [];
             setPendingPhotos([]);
             const emptyRemoved = new Set<string>();
@@ -183,8 +215,11 @@ export function HouseFormPage() {
             setRemovedPhotoIds(emptyRemoved);
             loadedHouseIdRef.current = houseId;
           }
-          existingPhotosRef.current = photos;
-          setExistingPhotos(photos);
+          existingPhotosRef.current = displayPhotos;
+          setExistingPhotos(displayPhotos);
+          if (navPhotos?.length) {
+            navigate(location.pathname, { replace: true, state: null });
+          }
           setLoadError(null);
           setFormError(null);
           resetSaveStatus();
@@ -201,11 +236,11 @@ export function HouseFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [houseId, isNew, user?.uid]);
+  }, [houseId, isNew, user?.uid, location.pathname, location.state, navigate]);
 
   useEffect(() => {
     return () => {
-      pendingPhotosRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      pendingPhotosRef.current.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
     };
   }, []);
 
@@ -213,7 +248,7 @@ export function HouseFormPage() {
   const totalPhotoCount = activeExistingPhotos.length + pendingPhotos.length;
   const pendingPhotoCount = pendingPhotos.length;
 
-  function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     e.target.value = '';
     if (!files?.length) return;
@@ -232,12 +267,20 @@ export function HouseFormPage() {
         showToast(msg, 'error');
         return;
       }
-      additions.push({ file, previewUrl: URL.createObjectURL(file) });
+      try {
+        const previewUrl = await readImagePreviewUrl(file);
+        additions.push({ file, previewUrl });
+      } catch {
+        const msg = '画像のプレビュー作成に失敗しました。別のファイルを試してください。';
+        showValidationError(msg);
+        showToast(msg, 'error');
+        return;
+      }
     }
 
     const nextTotal = activeExistingPhotos.length + pendingPhotos.length + additions.length;
     if (nextTotal > MAX_HOUSE_PHOTOS) {
-      additions.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      additions.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
       const msg = `写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`;
       showValidationError(msg);
       showToast(msg, 'error');
@@ -270,7 +313,7 @@ export function HouseFormPage() {
     setPendingPhotos((prev) => {
       const next = [...prev];
       const [removed] = next.splice(index, 1);
-      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      if (removed) releasePreviewUrl(removed.previewUrl);
       pendingPhotosRef.current = next;
       return next;
     });
@@ -279,19 +322,10 @@ export function HouseFormPage() {
 
   function clearPendingPhotos() {
     setPendingPhotos((prev) => {
-      prev.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      prev.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
       pendingPhotosRef.current = [];
       return [];
     });
-  }
-
-  function applySavedPhotos(photos: HousePhoto[]) {
-    existingPhotosRef.current = photos;
-    setExistingPhotos(photos);
-    const emptyRemoved = new Set<string>();
-    removedPhotoIdsRef.current = emptyRemoved;
-    setRemovedPhotoIds(emptyRemoved);
-    clearPendingPhotos();
   }
 
   function saveSuccessMessage(photoCount: number): string {
@@ -330,9 +364,10 @@ export function HouseFormPage() {
     setSaveStatus('saving');
     setSaveStatusMessage('保存を開始しています…');
 
-    const pendingFiles = pendingPhotosRef.current.map((p) => p.file);
+    const pendingFiles = getPendingFiles();
     const removedIds = removedPhotoIdsRef.current;
     const photoChanged = removedIds.size > 0 || pendingFiles.length > 0;
+    const expectedNewPhotos = pendingFiles.length;
 
     try {
       if (isNew) {
@@ -368,11 +403,22 @@ export function HouseFormPage() {
         const msg =
           saved.length > 0
             ? `物件を登録しました（写真 ${saved.length} 枚）`
-            : '物件を登録しました';
-        setSaveStatus('success');
+            : expectedNewPhotos > 0
+              ? '物件は登録しましたが、写真が保存されませんでした。もう一度ファイルを選んで保存してください。'
+              : '物件を登録しました';
+        if (saved.length > 0) {
+          setSaveStatus('success');
+        } else if (expectedNewPhotos > 0) {
+          setSaveStatus('error');
+          setFormError(msg);
+        } else {
+          setSaveStatus('success');
+        }
         setSaveStatusMessage(msg);
-        showToast(msg, 'success');
-        navigate(`/landlord/houses/${ref.id}/edit`);
+        showToast(msg, saved.length > 0 || expectedNewPhotos === 0 ? 'success' : 'error');
+        navigate(`/landlord/houses/${ref.id}/edit`, {
+          state: saved.length > 0 ? { photosAfterSave: saved } : null,
+        });
       } else if (houseId) {
         const saved = await saveHouseWithPhotos({
           houseId,
@@ -386,11 +432,21 @@ export function HouseFormPage() {
             setSaveStatusMessage(progressStepLabel(step, detail));
           },
         });
-        applySavedPhotos(saved);
-        const msg = saveSuccessMessage(saved.length);
-        setSaveStatus('success');
+        const reloaded = await listHousePhotos(houseId);
+        const displayPhotos = reloaded.length > 0 ? reloaded : saved;
+        applyPhotosToForm(displayPhotos);
+        let msg = saveSuccessMessage(displayPhotos.length);
+        if (expectedNewPhotos > 0 && displayPhotos.length === 0) {
+          msg =
+            '保存は完了しましたが、写真が登録されませんでした。ファイルを選び直して再度保存してください。';
+          setSaveStatus('error');
+          setFormError(msg);
+          showToast(msg, 'error');
+        } else {
+          setSaveStatus('success');
+          showToast(msg, 'success');
+        }
         setSaveStatusMessage(msg);
-        showToast(msg, 'success');
       }
     } catch (err) {
       const msg = messageForHouseFormSaveError(err);
@@ -537,13 +593,16 @@ export function HouseFormPage() {
         </label>
         <div className="field">
           <span>写真（任意・各 5MB 以下・最大 {MAX_HOUSE_PHOTOS} 枚）</span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            multiple
-            onChange={onPhotoFilesChange}
-            disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
-          />
+          <label className="file-picker">
+            <span className="btn ghost">写真ファイルを選ぶ</span>
+            <input
+              type="file"
+              accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.gif,.webp"
+              multiple
+              onChange={(e) => void onPhotoFilesChange(e)}
+              disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
+            />
+          </label>
           <p className="muted small" style={{ margin: 0 }}>
             ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。
             <strong> 追加・削除は「保存」ボタンを押すまで確定しません。</strong>

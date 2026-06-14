@@ -92,14 +92,27 @@ export function mapHousePhoto(id: string, data: Record<string, unknown>): HouseP
   };
 }
 
+function sortPhotos(list: HousePhoto[]): HousePhoto[] {
+  return [...list].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+}
+
 export async function listHousePhotos(houseId: string): Promise<HousePhoto[]> {
-  const q = query(photosCol(houseId), orderBy('order', 'asc'));
-  const snap = await getDocs(q);
-  const list: HousePhoto[] = [];
-  snap.forEach((d) => {
-    list.push(mapHousePhoto(d.id, d.data() as Record<string, unknown>));
-  });
-  return list;
+  try {
+    const q = query(photosCol(houseId), orderBy('order', 'asc'));
+    const snap = await getDocs(q);
+    const list: HousePhoto[] = [];
+    snap.forEach((d) => {
+      list.push(mapHousePhoto(d.id, d.data() as Record<string, unknown>));
+    });
+    return list;
+  } catch {
+    const snap = await getDocs(photosCol(houseId));
+    const list: HousePhoto[] = [];
+    snap.forEach((d) => {
+      list.push(mapHousePhoto(d.id, d.data() as Record<string, unknown>));
+    });
+    return sortPhotos(list);
+  }
 }
 
 function newPhotoDoc(url: string, order: number): DocumentData {

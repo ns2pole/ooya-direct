@@ -405,6 +405,24 @@ code {
   background: var(--danger-bg);
 }
 
+.file-picker {
+  display: inline-block;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.file-picker input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .landlord-row-head {
   display: flex;
   align-items: flex-start;

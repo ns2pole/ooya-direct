@@ -148,7 +148,7 @@ export function getStorageApp(): FirebaseStorage {
   return storageInstance;
 }
 
-const PHOTO_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+const PHOTO_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif']);
 
 function photoExtension(file: File): string {
   const raw = file.name.split('.').pop()?.toLowerCase();
