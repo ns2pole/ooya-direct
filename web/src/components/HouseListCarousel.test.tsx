@@ -37,15 +37,15 @@ describe('HouseListCarousel', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'テスト物件1' })).toBeInTheDocument();
+    expect(screen.getByText('テスト物件1')).toBeInTheDocument();
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '次の物件' }));
-    expect(screen.getByRole('heading', { name: 'テスト物件2' })).toBeInTheDocument();
+    expect(screen.getByText('テスト物件2')).toBeInTheDocument();
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '前の物件' }));
-    expect(screen.getByRole('heading', { name: 'テスト物件1' })).toBeInTheDocument();
+    expect(screen.getByText('テスト物件1')).toBeInTheDocument();
   });
 
   it('1件のとき前後ボタンは disabled', () => {

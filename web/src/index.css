@@ -308,10 +308,26 @@ code {
 }
 
 .house-carousel-nav-btn {
-  min-width: 2.5rem;
-  padding: 0.35rem 0.65rem;
-  font-size: 1.25rem;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
   line-height: 1;
+  color: var(--text);
+  border: 2px solid #94a3b8;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.house-carousel-nav-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #eef2ff;
+}
+
+.house-carousel-nav-btn:disabled {
+  opacity: 0.45;
 }
 
 .house-carousel-counter {
@@ -359,24 +375,22 @@ code {
   gap: 0.45rem;
 }
 
-.house-carousel-head {
+.house-carousel-meta {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 .house-carousel-title {
-  margin: 0;
-  font-size: 1.15rem;
   font-weight: 600;
   min-width: 0;
 }
 
 .house-carousel-date {
-  margin: 0;
   flex-shrink: 0;
-  font-size: 0.875rem;
   white-space: nowrap;
 }
 

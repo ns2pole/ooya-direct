@@ -16,7 +16,7 @@ import { HousePropertyTable } from '../components/HousePropertyTable';
 import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
-import { formatDate } from '../format';
+import { formatDate, formatDateOnly } from '../format';
 import { usePageHeader } from '../context/PageTitleContext';
 import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 
@@ -178,7 +178,7 @@ export function HouseDetailPage() {
 
   return (
     <article className="panel">
-      <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
+      <p className="muted house-detail-date">掲載: {formatDateOnly(house.createdAt)}</p>
       {photos.length > 0 ? (
         <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}

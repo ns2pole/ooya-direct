@@ -60,7 +60,7 @@ export function HouseListCarousel({ houses }: Props) {
       <div className="house-carousel-nav">
         <button
           type="button"
-          className="btn ghost house-carousel-nav-btn"
+          className="btn house-carousel-nav-btn"
           aria-label="前の物件"
           disabled={!canGoPrev}
           onClick={goPrev}
@@ -72,7 +72,7 @@ export function HouseListCarousel({ houses }: Props) {
         </span>
         <button
           type="button"
-          className="btn ghost house-carousel-nav-btn"
+          className="btn house-carousel-nav-btn"
           aria-label="次の物件"
           disabled={!canGoNext}
           onClick={goNext}
@@ -98,10 +98,10 @@ export function HouseListCarousel({ houses }: Props) {
           )}
         </div>
         <div className="house-carousel-body">
-          <div className="house-carousel-head">
-            <h2 className="house-carousel-title">{summary.title}</h2>
-            <p className="muted house-carousel-date">掲載: {summary.listedDate}</p>
-          </div>
+          <p className="house-carousel-meta">
+            <span className="house-carousel-title">{summary.title}</span>
+            <span className="house-carousel-date muted">掲載: {summary.listedDate}</span>
+          </p>
           <HouseListPropertySummary house={house} />
         </div>
       </Link>
