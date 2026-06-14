@@ -58,7 +58,8 @@ function labelForKey(key: keyof HousePropertyFields): string {
 
 export type HouseListPropertySummary = {
   rows: DetailRow[];
-  compactParts: DetailRow[];
+  /** 間取り・階建・築年数（値のみ・空は省略） */
+  compactValues: string[];
 };
 
 export function readHousePropertyFields(data: Record<string, unknown>): HousePropertyFields {
@@ -105,12 +106,12 @@ export function housePropertyListSummary(h: House): HouseListPropertySummary {
     const row = rowIfValue(labelForKey(key), h[key]);
     if (row) rows.push(row);
   }
-  const compactParts: DetailRow[] = [];
+  const compactValues: string[] = [];
   for (const key of LIST_COMPACT_KEYS) {
-    const row = rowIfValue(labelForKey(key), h[key]);
-    if (row) compactParts.push(row);
+    const value = h[key].trim();
+    if (value) compactValues.push(value);
   }
-  return { rows, compactParts };
+  return { rows, compactValues };
 }
 
 export function housePropertyListChips(h: House): string[] {

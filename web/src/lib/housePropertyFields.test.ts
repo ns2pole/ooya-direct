@@ -69,20 +69,21 @@ describe('housePropertyListSummary', () => {
         { label: '管理費等', value: '5000円' },
         { label: '敷/礼', value: '1ヶ月/1ヶ月' },
       ],
-      compactParts: [
-        { label: '間取り', value: '5LDK' },
-        { label: '階建', value: '3階建 / 2階' },
-        { label: '築年数', value: '築15年' },
-      ],
+      compactValues: ['5LDK', '3階建 / 2階', '築15年'],
     });
+  });
+
+  it('コンパクト行は空の項目を省略する', () => {
+    expect(
+      housePropertyListSummary(
+        mockHouse({ areaSize: '5LDK', floors: '', buildingAge: '築15年' })
+      ).compactValues
+    ).toEqual(['5LDK', '築15年']);
   });
 
   it('ジャンル・面積・地域は含めない', () => {
     const summary = housePropertyListSummary(mockHouse());
-    const labels = [
-      ...summary.rows.map((r) => r.label),
-      ...summary.compactParts.map((r) => r.label),
-    ];
+    const labels = summary.rows.map((r) => r.label);
     expect(labels).not.toContain('ジャンル');
     expect(labels).not.toContain('面積');
     expect(labels).not.toContain('地域');

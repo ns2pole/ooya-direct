@@ -334,10 +334,25 @@ code {
   gap: 0.45rem;
 }
 
+.house-carousel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .house-carousel-title {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 600;
+  min-width: 0;
+}
+
+.house-carousel-date {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .house-carousel-body .house-list-property {
@@ -363,26 +378,12 @@ code {
 
 .house-list-property-compact-item {
   white-space: nowrap;
-}
-
-.house-list-property-compact-label {
-  color: var(--muted);
-  margin-right: 0.2rem;
-}
-
-.house-list-property-compact-value {
   font-weight: 600;
 }
 
 .house-list-property-compact-sep {
   color: var(--muted);
   font-weight: 400;
-}
-
-.house-carousel-date {
-  margin: 0.15rem 0 0;
-  font-size: 0.875rem;
-  text-align: right;
 }
 
 .house-property-table {

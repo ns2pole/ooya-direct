@@ -98,9 +98,11 @@ export function HouseListCarousel({ houses }: Props) {
           )}
         </div>
         <div className="house-carousel-body">
-          <h2 className="house-carousel-title">{summary.title}</h2>
+          <div className="house-carousel-head">
+            <h2 className="house-carousel-title">{summary.title}</h2>
+            <p className="muted house-carousel-date">掲載: {summary.listedDate}</p>
+          </div>
           <HouseListPropertySummary house={house} />
-          <p className="muted house-carousel-date">掲載: {summary.listedDate}</p>
         </div>
       </Link>
     </section>
