@@ -87,6 +87,19 @@ export function HomePage() {
             return (
             <li key={h.id}>
               <Link to={`/houses/${h.id}`} className="house-card">
+                <span className="house-card-main">
+                  <span className="house-title">{h.title || '（無題）'}</span>
+                  <span className="muted house-card-meta">
+                    {[
+                      houseLocationLine(h),
+                      h.rent ? `家賃 ${h.rent}` : '',
+                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
+                      formatDateOnly(h.createdAt),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </span>
                 {cover ? (
                   <img
                     src={cover}
@@ -100,19 +113,6 @@ export function HomePage() {
                 ) : (
                   <div className="house-card-thumb house-card-thumb--empty" aria-hidden />
                 )}
-                <span className="house-card-main">
-                  <span className="house-title">{h.title || '（無題）'}</span>
-                  <span className="muted small house-card-meta">
-                    {[
-                      houseLocationLine(h),
-                      h.rent ? `家賃 ${h.rent}` : '',
-                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
-                      formatDateOnly(h.createdAt),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </span>
               </Link>
             </li>
             );

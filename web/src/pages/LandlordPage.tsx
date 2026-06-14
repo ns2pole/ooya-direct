@@ -206,6 +206,19 @@ export function LandlordPage() {
             return (
             <li key={h.id} className="landlord-row">
               <div className="landlord-row-head">
+                <div className="landlord-row-text">
+                  <strong>{h.title || '（無題）'}</strong>
+                  <div className="muted landlord-row-meta">
+                    {[
+                      houseLocationLine(h),
+                      h.rent ? `家賃 ${h.rent}` : '',
+                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
+                      formatDateOnly(h.updatedAt ?? h.createdAt),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </div>
+                </div>
                 {cover ? (
                   <img
                     src={cover}
@@ -219,19 +232,6 @@ export function LandlordPage() {
                 ) : (
                   <div className="landlord-thumb landlord-thumb--empty" aria-hidden />
                 )}
-                <div>
-                  <strong>{h.title || '（無題）'}</strong>
-                  <div className="muted small">
-                    {[
-                      houseLocationLine(h),
-                      h.rent ? `家賃 ${h.rent}` : '',
-                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
-                      formatDateOnly(h.updatedAt ?? h.createdAt),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                </div>
               </div>
               <div className="row">
                 <Link to={`/houses/${h.id}`} className="btn ghost">

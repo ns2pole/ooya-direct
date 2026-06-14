@@ -97,7 +97,17 @@ VITE_BASE=/ooya-direct/ npm run build
 # 生成された dist/ を任意の方法で GitHub Pages 用ブランチや docs/ に配置
 ```
 
-ルーティングは **HashRouter**（`#/...`）です。
+ルーティングは **HashRouter**（`#/...`）です。ヘッダーにはナビリンクを出さない構成です。直接 URL で開く場合は次のパス（`#` 以降）を使います。
+
+| 画面 | パス（`#` 以降） | 例（リポジトリ名が `ooya-direct` のとき） |
+|------|-------------------|------------------------------------------|
+| 物件一覧（トップ） | `/` | `https://<ユーザー>.github.io/ooya-direct/#/` |
+| 物件詳細 | `/houses/{houseId}` | `https://<ユーザー>.github.io/ooya-direct/#/houses/abc123` |
+| 大家ログイン・マイ物件 | `/landlord` | `https://<ユーザー>.github.io/ooya-direct/#/landlord` |
+| 物件の新規登録 | `/landlord/houses/new` | `https://<ユーザー>.github.io/ooya-direct/#/landlord/houses/new` |
+| 物件の編集 | `/landlord/houses/{houseId}/edit` | `https://<ユーザー>.github.io/ooya-direct/#/landlord/houses/abc123/edit` |
+
+ローカル開発（`npm run dev`）でも同じく `http://localhost:5173/#/landlord` のように `#` 以降で指定します。
 
 ## データモデル
 

@@ -8,10 +8,6 @@ export function Layout() {
         <Link to="/" className="brand">
           物件ダイレクト
         </Link>
-        <nav className="nav">
-          <Link to="/">物件一覧</Link>
-          <Link to="/landlord">大家さん</Link>
-        </nav>
       </header>
 
       {!isFirebaseConfigured ? (
