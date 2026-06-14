@@ -5,16 +5,27 @@ export type PageHeaderCrumb = {
   to?: string;
 };
 
+export type PageHeaderEndAction = {
+  label: string;
+  targetId: string;
+};
+
 type PageTitleContextValue = {
   crumbs: PageHeaderCrumb[];
   setCrumbs: (crumbs: PageHeaderCrumb[]) => void;
+  endAction: PageHeaderEndAction | null;
+  setEndAction: (action: PageHeaderEndAction | null) => void;
 };
 
 const PageTitleContext = createContext<PageTitleContextValue | null>(null);
 
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [crumbs, setCrumbs] = useState<PageHeaderCrumb[]>([]);
-  const value = useMemo(() => ({ crumbs, setCrumbs }), [crumbs]);
+  const [endAction, setEndAction] = useState<PageHeaderEndAction | null>(null);
+  const value = useMemo(
+    () => ({ crumbs, setCrumbs, endAction, setEndAction }),
+    [crumbs, endAction]
+  );
   return <PageTitleContext.Provider value={value}>{children}</PageTitleContext.Provider>;
 }
 
@@ -32,6 +43,20 @@ export function usePageTitle(pageTitle: string) {
   usePageHeader([{ label: pageTitle }]);
 }
 
+export function usePageHeaderEndAction(action: PageHeaderEndAction | null) {
+  const setEndAction = useContext(PageTitleContext)?.setEndAction;
+  const serialized = JSON.stringify(action);
+  useEffect(() => {
+    if (!setEndAction) return;
+    setEndAction(action ? (JSON.parse(serialized) as PageHeaderEndAction) : null);
+    return () => setEndAction(null);
+  }, [serialized, setEndAction, action]);
+}
+
 export function usePageHeaderValue(): PageHeaderCrumb[] {
   return useContext(PageTitleContext)?.crumbs ?? [];
+}
+
+export function usePageHeaderEndActionValue(): PageHeaderEndAction | null {
+  return useContext(PageTitleContext)?.endAction ?? null;
 }

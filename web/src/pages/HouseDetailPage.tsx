@@ -17,7 +17,7 @@ import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate, formatDateOnly } from '../format';
-import { usePageHeader } from '../context/PageTitleContext';
+import { usePageHeader, usePageHeaderEndAction } from '../context/PageTitleContext';
 import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
@@ -36,6 +36,11 @@ export function HouseDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   usePageHeader(houseDetailHeaderCrumbs(house));
+  usePageHeaderEndAction(
+    house !== undefined && house !== null
+      ? { label: '問い合わせする', targetId: 'inquiry-message' }
+      : null
+  );
 
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);

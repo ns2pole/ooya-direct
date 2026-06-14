@@ -308,14 +308,17 @@ code {
 }
 
 .house-carousel-nav-btn {
-  min-width: 3rem;
-  min-height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  min-height: 3.25rem;
   padding: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 900;
   line-height: 1;
   color: var(--text);
-  border: 2px solid #94a3b8;
+  border: 3px solid #475569;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
@@ -844,8 +847,21 @@ code {
   font-weight: 600;
 }
 
+.app-header-end {
+  justify-self: end;
+  min-width: 0;
+}
+
+.app-header-inquiry-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .inquiry-message {
   min-height: 112px;
+  scroll-margin-top: 4.5rem;
 }
 
 .btn {

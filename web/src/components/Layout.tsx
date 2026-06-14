@@ -1,10 +1,53 @@
 import { Fragment } from 'react';
 import { Link, Outlet, useMatch } from 'react-router-dom';
-import { usePageHeaderValue } from '../context/PageTitleContext';
+import { usePageHeaderEndActionValue, usePageHeaderValue } from '../context/PageTitleContext';
+import { scrollToElementId } from '../lib/scrollToElement';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
 
-export function Layout() {
+function HeaderEnd() {
   const crumbs = usePageHeaderValue();
+  const endAction = usePageHeaderEndActionValue();
+
+  if (endAction) {
+    return (
+      <div className="app-header-end">
+        <button
+          type="button"
+          className="btn primary app-header-inquiry-btn"
+          onClick={() => scrollToElementId(endAction.targetId)}
+        >
+          {endAction.label}
+        </button>
+      </div>
+    );
+  }
+
+  if (crumbs.length > 0) {
+    return (
+      <nav className="app-header-page" aria-label="現在のページ">
+        {crumbs.map((crumb, index) => (
+          <Fragment key={`${crumb.to ?? ''}-${crumb.label}`}>
+            {index > 0 ? (
+              <span className="app-header-sep" aria-hidden="true">
+                {' '}
+                /{' '}
+              </span>
+            ) : null}
+            {crumb.to ? (
+              <Link to={crumb.to}>{crumb.label}</Link>
+            ) : (
+              <span>{crumb.label}</span>
+            )}
+          </Fragment>
+        ))}
+      </nav>
+    );
+  }
+
+  return <div className="app-header-end" aria-hidden="true" />;
+}
+
+export function Layout() {
   const isHouseDetail = Boolean(useMatch('/houses/:houseId'));
 
   return (
@@ -21,27 +64,7 @@ export function Layout() {
           <Link to="/" className="brand app-header-brand">
             大家ダイレクト
           </Link>
-          {crumbs.length > 0 ? (
-            <nav className="app-header-page" aria-label="現在のページ">
-              {crumbs.map((crumb, index) => (
-                <Fragment key={`${crumb.to ?? ''}-${crumb.label}`}>
-                  {index > 0 ? (
-                    <span className="app-header-sep" aria-hidden="true">
-                      {' '}
-                      /{' '}
-                    </span>
-                  ) : null}
-                  {crumb.to ? (
-                    <Link to={crumb.to}>{crumb.label}</Link>
-                  ) : (
-                    <span>{crumb.label}</span>
-                  )}
-                </Fragment>
-              ))}
-            </nav>
-          ) : (
-            <div className="app-header-page" aria-hidden="true" />
-          )}
+          <HeaderEnd />
         </div>
       </header>
 

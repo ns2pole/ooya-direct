@@ -65,7 +65,7 @@ export function HouseListCarousel({ houses }: Props) {
           disabled={!canGoPrev}
           onClick={goPrev}
         >
-          ‹
+          {'<'}
         </button>
         <span className="house-carousel-counter" aria-live="polite">
           {safeIndex + 1} / {count}
@@ -77,7 +77,7 @@ export function HouseListCarousel({ houses }: Props) {
           disabled={!canGoNext}
           onClick={goNext}
         >
-          ›
+          {'>'}
         </button>
       </div>
 
