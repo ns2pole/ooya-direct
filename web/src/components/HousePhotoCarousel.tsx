@@ -30,7 +30,7 @@ export function HousePhotoCarousel({ photos, title }: Props) {
         >
           {photos.map((url, i) => (
             <img
-              key={url}
+              key={`${i}-${url}`}
               src={url}
               alt={count > 1 ? `${altBase}（${i + 1}/${count}）` : altBase}
               className="house-carousel-slide"

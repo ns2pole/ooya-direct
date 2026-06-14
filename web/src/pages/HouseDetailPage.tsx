@@ -13,8 +13,9 @@ import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import { HousePhotoCarousel } from '../components/HousePhotoCarousel';
-import type { House, Inquiry } from '../types';
+import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate } from '../format';
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
@@ -29,6 +30,7 @@ function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
 export function HouseDetailPage() {
   const { houseId } = useParams();
   const [house, setHouse] = useState<House | null | undefined>(undefined);
+  const [photos, setPhotos] = useState<HousePhoto[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -52,12 +54,15 @@ export function HouseDetailPage() {
         if (!houseSnap.exists) {
           if (!cancelled) {
             setHouse(null);
+            setPhotos([]);
             setInquiries([]);
           }
           return;
         }
 
-        const h = mapHouse(houseSnap.id, houseSnap.data() as Record<string, unknown>);
+        const houseData = houseSnap.data() as Record<string, unknown>;
+        const h = mapHouse(houseSnap.id, houseData);
+        const photoList = await loadHousePhotosForDisplay(houseId, houseData);
         const iq = query(
           collection(getDb(), 'houses', houseId, 'inquiries'),
           orderBy('createdAt', 'desc')
@@ -70,6 +75,7 @@ export function HouseDetailPage() {
 
         if (!cancelled) {
           setHouse(h);
+          setPhotos(photoList);
           setInquiries(list);
           setLoadError(null);
         }
@@ -193,8 +199,8 @@ export function HouseDetailPage() {
             .join(' · ')}
         </p>
       ) : null}
-      {house.photoUrls.length > 0 ? (
-        <HousePhotoCarousel photos={house.photoUrls} title={house.title} />
+      {photos.length > 0 ? (
+        <HousePhotoCarousel photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}
       <div className="prose">
         {house.description ? (

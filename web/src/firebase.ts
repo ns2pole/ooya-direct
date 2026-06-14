@@ -88,6 +88,13 @@ export function messageForHouseFormSaveError(err: unknown): string {
       '物件の ownerId（ログイン UID と一致）を README の「トラブルシューティング（Storage / Safari）」で確認してください。'
     );
   }
+  if (code === 'permission-denied') {
+    return (
+      '保存が拒否されました（permission-denied）。' +
+      'Firestore ルールのデプロイ（firebase deploy --only firestore:rules）を確認してください。' +
+      'photos サブコレクションのルールが未反映の可能性があります。'
+    );
+  }
   return err instanceof Error ? err.message : '保存に失敗しました。';
 }
 

@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
+import { deleteAllHousePhotos } from '../lib/housePhotos';
 import { useAuth } from '../context/AuthContext';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
@@ -109,6 +110,7 @@ export function LandlordPage() {
   async function onDelete(h: House) {
     if (!user || h.ownerId !== user.uid) return;
     if (!window.confirm(`「${h.title || '無題'}」を削除しますか？`)) return;
+    await deleteAllHousePhotos(h.id);
     await deleteDoc(doc(getDb(), 'houses', h.id));
     setHouses((prev) => prev.filter((x) => x.id !== h.id));
   }

@@ -23,11 +23,15 @@ import {
   getDb,
   isFirebaseConfigured,
   messageForHouseFormSaveError,
-  deleteHousePhotoByUrl,
-  uploadHousePhoto,
 } from '../firebase';
+import {
+  loadHousePhotosForDisplay,
+  MAX_HOUSE_PHOTOS,
+  saveHousePhotos,
+} from '../lib/housePhotos';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import type { HousePhoto } from '../types';
 
 export function HouseFormPage() {
   const { houseId } = useParams();
@@ -43,8 +47,8 @@ export function HouseFormPage() {
   const [town, setTown] = useState('');
   const [rent, setRent] = useState('');
   const [areaSize, setAreaSize] = useState('');
-  const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
-  const [removedPhotoUrls, setRemovedPhotoUrls] = useState<Set<string>>(() => new Set());
+  const [existingPhotos, setExistingPhotos] = useState<HousePhoto[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<Set<string>>(() => new Set());
   const [pendingPhotos, setPendingPhotos] = useState<{ file: File; previewUrl: string }[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -67,7 +71,6 @@ export function HouseFormPage() {
   const townList = townKey ? (townCache[townKey] ?? []) : [];
 
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-  const MAX_PHOTOS = 20;
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +139,7 @@ export function HouseFormPage() {
           if (!cancelled) setError('この物件を編集する権限がありません。');
           return;
         }
+        const photos = await loadHousePhotosForDisplay(houseId, data);
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
@@ -145,20 +149,8 @@ export function HouseFormPage() {
           setRent(String(data.rent ?? ''));
           const rawArea = String(data.areaSize ?? '').trim();
           setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
-          const rawList = data.photoUrls;
-          if (Array.isArray(rawList)) {
-            setExistingPhotoUrls(
-              rawList
-                .filter((u): u is string => typeof u === 'string' && u.trim() !== '')
-                .map((u) => u.trim())
-            );
-          } else {
-            const p = data.photoUrl;
-            setExistingPhotoUrls(
-              typeof p === 'string' && p.trim() !== '' ? [p.trim()] : []
-            );
-          }
-          setRemovedPhotoUrls(new Set());
+          setExistingPhotos(photos);
+          setRemovedPhotoIds(new Set());
           setPendingPhotos([]);
           setError(null);
         }
@@ -182,8 +174,8 @@ export function HouseFormPage() {
     };
   }, [pendingPhotos]);
 
-  const activeExistingUrls = existingPhotoUrls.filter((u) => !removedPhotoUrls.has(u));
-  const totalPhotoCount = activeExistingUrls.length + pendingPhotos.length;
+  const activeExistingPhotos = existingPhotos.filter((p) => !removedPhotoIds.has(p.id));
+  const totalPhotoCount = activeExistingPhotos.length + pendingPhotos.length;
 
   function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -203,9 +195,9 @@ export function HouseFormPage() {
       additions.push({ file, previewUrl: URL.createObjectURL(file) });
     }
 
-    if (totalPhotoCount + additions.length > MAX_PHOTOS) {
+    if (totalPhotoCount + additions.length > MAX_HOUSE_PHOTOS) {
       additions.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
-      setError(`写真は最大 ${MAX_PHOTOS} 枚までです。`);
+      setError(`写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`);
       return;
     }
 
@@ -213,8 +205,8 @@ export function HouseFormPage() {
     setPendingPhotos((prev) => [...prev, ...additions]);
   }
 
-  function removeExistingPhoto(url: string) {
-    setRemovedPhotoUrls((prev) => new Set(prev).add(url));
+  function removeExistingPhoto(photoId: string) {
+    setRemovedPhotoIds((prev) => new Set(prev).add(photoId));
   }
 
   function removePendingPhoto(index: number) {
@@ -226,27 +218,42 @@ export function HouseFormPage() {
     });
   }
 
-  async function buildPhotoUrls(houseDocId: string): Promise<string[]> {
-    const kept = existingPhotoUrls.filter((u) => !removedPhotoUrls.has(u));
-    const uploaded: string[] = [];
-    for (const { file } of pendingPhotos) {
-      uploaded.push(await uploadHousePhoto(houseDocId, file));
-    }
-    return [...kept, ...uploaded];
+  function clearPendingPhotos() {
+    setPendingPhotos((prev) => {
+      prev.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      return [];
+    });
   }
 
-  async function deleteRemovedPhotosFromStorage(): Promise<void> {
-    const tasks = [...removedPhotoUrls]
-      .filter((url) => existingPhotoUrls.includes(url))
-      .map((url) => deleteHousePhotoByUrl(url).catch(() => undefined));
-    await Promise.all(tasks);
+  function applySavedPhotos(photos: HousePhoto[]) {
+    setExistingPhotos(photos);
+    setRemovedPhotoIds(new Set());
+    clearPendingPhotos();
   }
 
-  function photoFields(urls: string[]): Record<string, unknown> {
-    if (urls.length === 0) {
-      return { photoUrls: deleteField(), photoUrl: deleteField() };
+  function houseTextFields(options?: { stripLegacyPhotos?: boolean }): Record<string, unknown> {
+    const fields: Record<string, unknown> = {
+      title: title.trim(),
+      description: description.trim(),
+      prefecture: prefecture.trim(),
+      city: city.trim(),
+      town: town.trim(),
+      rent: rent.trim(),
+      areaSize: areaSize.trim(),
+      updatedAt: serverTimestamp(),
+    };
+    if (options?.stripLegacyPhotos) {
+      fields.photoUrl = deleteField();
+      fields.photoUrls = deleteField();
     }
-    return { photoUrls: urls, photoUrl: urls[0] };
+    return fields;
+  }
+
+  function saveSuccessMessage(photoCount: number): string {
+    if (photoCount > 0) {
+      return `保存しました（写真 ${photoCount} 枚）。`;
+    }
+    return '保存しました。';
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -255,45 +262,42 @@ export function HouseFormPage() {
     setSaving(true);
     setError(null);
     try {
+      const photoChanged = removedPhotoIds.size > 0 || pendingPhotos.length > 0;
+
       if (isNew) {
         const ref = await addDoc(collection(getDb(), 'houses'), {
           ownerId: user.uid,
-          title: title.trim(),
-          description: description.trim(),
-          prefecture: prefecture.trim(),
-          city: city.trim(),
-          town: town.trim(),
-          rent: rent.trim(),
-          areaSize: areaSize.trim(),
+          ...houseTextFields(),
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
         });
+        let savedPhotoCount = 0;
         if (pendingPhotos.length > 0) {
-          const photoUrls = await buildPhotoUrls(ref.id);
-          await updateDoc(doc(getDb(), 'houses', ref.id), {
-            ...photoFields(photoUrls),
-            updatedAt: serverTimestamp(),
+          const saved = await saveHousePhotos(ref.id, {
+            existing: [],
+            removedIds: new Set(),
+            pendingFiles: pendingPhotos.map((p) => p.file),
           });
+          savedPhotoCount = saved.length;
         }
-        showToast('物件を登録しました。', 'success');
+        showToast(
+          savedPhotoCount > 0
+            ? `物件を登録しました（写真 ${savedPhotoCount} 枚）。`
+            : '物件を登録しました。',
+          'success'
+        );
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
-        const photoUrls = await buildPhotoUrls(houseId);
-        await deleteRemovedPhotosFromStorage();
-        const payload: Record<string, unknown> = {
-          title: title.trim(),
-          description: description.trim(),
-          prefecture: prefecture.trim(),
-          city: city.trim(),
-          town: town.trim(),
-          rent: rent.trim(),
-          areaSize: areaSize.trim(),
-          updatedAt: serverTimestamp(),
-          ...photoFields(photoUrls),
-        };
-        await updateDoc(doc(getDb(), 'houses', houseId), payload);
-        showToast('保存しました。', 'success');
-        navigate('/landlord');
+        await updateDoc(doc(getDb(), 'houses', houseId), houseTextFields({ stripLegacyPhotos: true }));
+        let saved = activeExistingPhotos;
+        if (photoChanged) {
+          saved = await saveHousePhotos(houseId, {
+            existing: existingPhotos,
+            removedIds: removedPhotoIds,
+            pendingFiles: pendingPhotos.map((p) => p.file),
+          });
+        }
+        applySavedPhotos(saved);
+        showToast(saveSuccessMessage(saved.length), 'success');
       }
     } catch (err) {
       const msg = messageForHouseFormSaveError(err);
@@ -432,26 +436,28 @@ export function HouseFormPage() {
           </select>
         </label>
         <div className="field">
-          <span>写真（任意・各 5MB 以下・最大 {MAX_PHOTOS} 枚）</span>
+          <span>写真（任意・各 5MB 以下・最大 {MAX_HOUSE_PHOTOS} 枚）</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
             multiple
             onChange={onPhotoFilesChange}
-            disabled={totalPhotoCount >= MAX_PHOTOS}
+            disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
           />
           <p className="muted small" style={{ margin: 0 }}>
-            物件詳細ページで ‹ › ボタンで切り替えて閲覧できます。先頭の写真が一覧のサムネイルになります。
+            1枚ごとに Firestore の photos コレクションへ保存されます。詳細ページで ‹ ›
+            ボタンで切り替えられます。先頭の写真が一覧サムネイルになります。
+            {totalPhotoCount > 0 ? ` 現在 ${totalPhotoCount} 枚選択中。` : ''}
           </p>
           {totalPhotoCount > 0 ? (
             <ul className="house-form-photos">
-              {activeExistingUrls.map((url) => (
-                <li key={url} className="house-form-photo-item">
-                  <img src={url} alt="" width={140} height={100} />
+              {activeExistingPhotos.map((photo) => (
+                <li key={photo.id} className="house-form-photo-item">
+                  <img src={photo.url} alt="" width={140} height={100} />
                   <button
                     type="button"
                     className="house-form-photo-remove"
-                    onClick={() => removeExistingPhoto(url)}
+                    onClick={() => removeExistingPhoto(photo.id)}
                     aria-label="この写真を削除"
                   >
                     削除

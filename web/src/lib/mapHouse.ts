@@ -1,23 +1,18 @@
+import { legacyPhotoUrlsFromHouse } from './housePhotos';
 import type { House } from '../types';
 
-function parsePhotoUrls(data: Record<string, unknown>): string[] {
-  const rawList = data.photoUrls;
-  if (Array.isArray(rawList)) {
-    const urls = rawList
-      .filter((u): u is string => typeof u === 'string' && u.trim() !== '')
-      .map((u) => u.trim());
-    if (urls.length > 0) return urls;
+function resolveCoverPhotoUrl(data: Record<string, unknown>): string | null {
+  const cover = data.coverPhotoUrl;
+  if (typeof cover === 'string' && cover.trim() !== '') {
+    return cover.trim();
   }
-  const rawSingle = data.photoUrl;
-  if (typeof rawSingle === 'string' && rawSingle.trim() !== '') {
-    return [rawSingle.trim()];
-  }
-  return [];
+  const legacy = legacyPhotoUrlsFromHouse(data);
+  return legacy[0] ?? null;
 }
 
 /** 一覧・サムネイル用の代表画像 */
-export function houseCoverPhoto(h: Pick<House, 'photoUrls'>): string | null {
-  return h.photoUrls[0] ?? null;
+export function houseCoverPhoto(h: Pick<House, 'coverPhotoUrl'>): string | null {
+  return h.coverPhotoUrl;
 }
 
 export function mapHouse(id: string, data: Record<string, unknown>): House {
@@ -26,7 +21,7 @@ export function mapHouse(id: string, data: Record<string, unknown>): House {
     ownerId: String(data.ownerId ?? ''),
     title: String(data.title ?? ''),
     description: String(data.description ?? ''),
-    photoUrls: parsePhotoUrls(data),
+    coverPhotoUrl: resolveCoverPhotoUrl(data),
     prefecture: String(data.prefecture ?? ''),
     city: String(data.city ?? ''),
     town: String(data.town ?? ''),

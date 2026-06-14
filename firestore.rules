@@ -2,62 +2,102 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function houseDoc(houseId) {
+      return get(/databases/$(database)/documents/houses/$(houseId));
+    }
+
+    function isHouseOwner(houseId) {
+      return request.auth != null
+        && houseDoc(houseId).data.ownerId == request.auth.uid;
+    }
+
+    function validCoverPhotoUrl() {
+      return !('coverPhotoUrl' in request.resource.data)
+        || (request.resource.data.coverPhotoUrl is string
+          && request.resource.data.coverPhotoUrl.size() > 0
+          && request.resource.data.coverPhotoUrl.size() < 2048
+          && request.resource.data.coverPhotoUrl.matches('https://.*'));
+    }
+
+    function validLegacyPhotoUrl() {
+      return !('photoUrl' in request.resource.data)
+        || (request.resource.data.photoUrl is string
+          && request.resource.data.photoUrl.size() > 0
+          && request.resource.data.photoUrl.size() < 2048
+          && request.resource.data.photoUrl.matches('https://.*'));
+    }
+
+    function validLegacyPhotoUrls() {
+      return !('photoUrls' in request.resource.data)
+        || (request.resource.data.photoUrls is list
+          && request.resource.data.photoUrls.size() <= 20);
+    }
+
+    function validHouseFields() {
+      return request.resource.data.keys().hasOnly([
+          'ownerId', 'title', 'description', 'coverPhotoUrl',
+          'photoUrl', 'photoUrls',
+          'createdAt', 'updatedAt',
+          'prefecture', 'city', 'town', 'rent', 'areaSize'
+        ])
+        && request.resource.data.prefecture is string
+        && request.resource.data.prefecture.size() <= 30
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 120
+        && request.resource.data.town is string
+        && request.resource.data.town.size() <= 200
+        && request.resource.data.rent is string
+        && request.resource.data.rent.size() <= 50
+        && request.resource.data.areaSize is string
+        && request.resource.data.areaSize.size() <= 50
+        && validCoverPhotoUrl()
+        && validLegacyPhotoUrl()
+        && validLegacyPhotoUrls();
+    }
+
+    function validPhotoDoc() {
+      return request.resource.data.keys().hasOnly([
+          'url', 'order', 'label', 'createdAt'
+        ])
+        && request.resource.data.url is string
+        && request.resource.data.url.size() > 0
+        && request.resource.data.url.size() < 2048
+        && request.resource.data.url.matches('https://.*')
+        && request.resource.data.order is int
+        && request.resource.data.order >= 0
+        && request.resource.data.order <= 19
+        && (!('label' in request.resource.data)
+          || request.resource.data.label == null
+          || (request.resource.data.label is string
+            && request.resource.data.label.size() <= 50));
+    }
+
     match /houses/{houseId} {
       allow read: if true;
 
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'photoUrls', 'createdAt', 'updatedAt',
-          'prefecture', 'city', 'town', 'rent', 'areaSize'
-        ])
-        && request.resource.data.prefecture is string
-        && request.resource.data.prefecture.size() <= 30
-        && request.resource.data.city is string
-        && request.resource.data.city.size() <= 120
-        && request.resource.data.town is string
-        && request.resource.data.town.size() <= 200
-        && request.resource.data.rent is string
-        && request.resource.data.rent.size() <= 50
-        && request.resource.data.areaSize is string
-        && request.resource.data.areaSize.size() <= 50
-        && (!('photoUrl' in request.resource.data)
-          || (request.resource.data.photoUrl is string
-            && request.resource.data.photoUrl.size() > 0
-            && request.resource.data.photoUrl.size() < 2048
-            && request.resource.data.photoUrl.matches('https://.*')))
-        && (!('photoUrls' in request.resource.data)
-          || (request.resource.data.photoUrls is list
-            && request.resource.data.photoUrls.size() <= 20));
+        && validHouseFields();
 
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'photoUrls', 'createdAt', 'updatedAt',
-          'prefecture', 'city', 'town', 'rent', 'areaSize'
-        ])
-        && request.resource.data.prefecture is string
-        && request.resource.data.prefecture.size() <= 30
-        && request.resource.data.city is string
-        && request.resource.data.city.size() <= 120
-        && request.resource.data.town is string
-        && request.resource.data.town.size() <= 200
-        && request.resource.data.rent is string
-        && request.resource.data.rent.size() <= 50
-        && request.resource.data.areaSize is string
-        && request.resource.data.areaSize.size() <= 50
-        && (!('photoUrl' in request.resource.data)
-          || (request.resource.data.photoUrl is string
-            && request.resource.data.photoUrl.size() > 0
-            && request.resource.data.photoUrl.size() < 2048
-            && request.resource.data.photoUrl.matches('https://.*')))
-        && (!('photoUrls' in request.resource.data)
-          || (request.resource.data.photoUrls is list
-            && request.resource.data.photoUrls.size() <= 20));
+        && validHouseFields();
 
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;
+
+      match /photos/{photoId} {
+        allow read: if true;
+
+        allow create: if isHouseOwner(houseId)
+          && validPhotoDoc();
+
+        allow update: if isHouseOwner(houseId)
+          && validPhotoDoc();
+
+        allow delete: if isHouseOwner(houseId);
+      }
 
       match /inquiries/{inquiryId} {
         allow read: if true;
