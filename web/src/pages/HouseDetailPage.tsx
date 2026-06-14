@@ -203,15 +203,16 @@ export function HouseDetailPage() {
         )}
       </div>
 
-      <section className="stack-lg" aria-labelledby="inquiries-heading">
+      <section className="stack-lg" aria-labelledby="inquiry-message-label">
         <form className="stack" onSubmit={onSubmitInquiry}>
-          <h2 id="inquiries-heading">問い合わせを送る</h2>
-          <label className="field">
-            <span>メッセージ</span>
+          <label className="field inquiry-field" htmlFor="inquiry-message">
+            <span id="inquiry-message-label">メッセージ</span>
             <textarea
+              id="inquiry-message"
+              className="inquiry-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              rows={4}
+              rows={5}
               required
               maxLength={2000}
             />

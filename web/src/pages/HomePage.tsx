@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
-import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
-import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
-import { formatDateOnly } from '../format';
+import { mapHouse } from '../lib/mapHouse';
 import { usePageTitle } from '../context/PageTitleContext';
+import { HouseListCarousel } from '../components/HouseListCarousel';
 
 export function HomePage() {
   usePageTitle('物件一覧');
@@ -79,43 +77,7 @@ export function HomePage() {
           <p className="muted">大家さんから登録されるとここに表示されます。</p>
         </div>
       ) : (
-        <ul className="house-list">
-          {houses.map((h) => {
-            const cover = houseCoverPhoto(h);
-            return (
-            <li key={h.id}>
-              <Link to={`/houses/${h.id}`} className="house-card">
-                <span className="house-card-main">
-                  <span className="house-title">{h.title || '（無題）'}</span>
-                  <span className="muted house-card-meta">
-                    {[
-                      houseLocationLine(h),
-                      h.rent ? `家賃 ${h.rent}` : '',
-                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
-                      formatDateOnly(h.createdAt),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </span>
-                {cover ? (
-                  <img
-                    src={cover}
-                    alt=""
-                    className="house-card-thumb"
-                    width={112}
-                    height={80}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="house-card-thumb house-card-thumb--empty" aria-hidden />
-                )}
-              </Link>
-            </li>
-            );
-          })}
-        </ul>
+        <HouseListCarousel houses={houses} />
       )}
     </section>
   );
