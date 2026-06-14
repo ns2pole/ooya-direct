@@ -10,6 +10,7 @@ import {
   getTownNamesForPrefAndCity,
 } from '../address/geolonia';
 import { AutocompleteSelect } from '../components/AutocompleteSelect';
+import { PhotoFileInput } from '../components/PhotoFileInput';
 import { AREA_SIZE_OPTIONS } from '../constants/areaSizeOptions';
 import { getDb, isFirebaseConfigured, messageForHouseFormSaveError } from '../firebase';
 import {
@@ -19,7 +20,7 @@ import {
   progressStepLabel,
   saveHouseWithPhotos,
 } from '../lib/housePhotos';
-import { imageFileHint, isAllowedImageFile, readImagePreviewUrl } from '../lib/imageFile';
+import { releasePhotoPreviewUrl, type PendingPhotoEntry } from '../lib/photoFileSelection';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
@@ -88,12 +89,9 @@ export function HouseFormPage() {
   }
 
   function releasePreviewUrl(previewUrl: string) {
-    if (previewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(previewUrl);
-    }
+    releasePhotoPreviewUrl(previewUrl);
   }
 
-  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
   function applyPhotosToForm(photos: HousePhoto[]) {
     existingPhotosRef.current = photos;
@@ -248,45 +246,7 @@ export function HouseFormPage() {
   const totalPhotoCount = activeExistingPhotos.length + pendingPhotos.length;
   const pendingPhotoCount = pendingPhotos.length;
 
-  async function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    e.target.value = '';
-    if (!files?.length) return;
-
-    const additions: { file: File; previewUrl: string }[] = [];
-    for (const file of Array.from(files)) {
-      if (!isAllowedImageFile(file)) {
-        const msg = `画像ファイル（${imageFileHint()}）を選んでください。`;
-        showValidationError(msg);
-        showToast(msg, 'error');
-        return;
-      }
-      if (file.size > MAX_IMAGE_BYTES) {
-        const msg = '画像は 5MB 以下にしてください。';
-        showValidationError(msg);
-        showToast(msg, 'error');
-        return;
-      }
-      try {
-        const previewUrl = await readImagePreviewUrl(file);
-        additions.push({ file, previewUrl });
-      } catch {
-        const msg = '画像のプレビュー作成に失敗しました。別のファイルを試してください。';
-        showValidationError(msg);
-        showToast(msg, 'error');
-        return;
-      }
-    }
-
-    const nextTotal = activeExistingPhotos.length + pendingPhotos.length + additions.length;
-    if (nextTotal > MAX_HOUSE_PHOTOS) {
-      additions.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
-      const msg = `写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`;
-      showValidationError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
+  async function onPhotoFilesChange(additions: PendingPhotoEntry[]) {
     setFormError(null);
     resetSaveStatus();
     setPendingPhotos((prev) => {
@@ -298,6 +258,11 @@ export function HouseFormPage() {
       `${additions.length}枚追加しました。下の「保存」ボタンを押すと登録されます。`,
       'success'
     );
+  }
+
+  function onPhotoFilesError(msg: string) {
+    showValidationError(msg);
+    showToast(msg, 'error');
   }
 
   function removeExistingPhoto(photoId: string) {
@@ -593,16 +558,13 @@ export function HouseFormPage() {
         </label>
         <div className="field">
           <span>写真（任意・各 5MB 以下・最大 {MAX_HOUSE_PHOTOS} 枚）</span>
-          <label className="file-picker">
-            <span className="btn ghost">写真ファイルを選ぶ</span>
-            <input
-              type="file"
-              accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.gif,.webp"
-              multiple
-              onChange={(e) => void onPhotoFilesChange(e)}
-              disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
-            />
-          </label>
+          <PhotoFileInput
+            existingCount={activeExistingPhotos.length}
+            pendingCount={pendingPhotos.length}
+            disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
+            onAdditions={(additions) => void onPhotoFilesChange(additions)}
+            onError={onPhotoFilesError}
+          />
           <p className="muted small" style={{ margin: 0 }}>
             ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。
             <strong> 追加・削除は「保存」ボタンを押すまで確定しません。</strong>

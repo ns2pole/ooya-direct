@@ -12,9 +12,10 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { deleteHousePhotoByUrl, getDb, messageForHouseFormSaveError, uploadHousePhoto } from '../firebase';
+import { MAX_HOUSE_PHOTOS } from './photoFileSelection';
 import type { HousePhoto } from '../types';
 
-export const MAX_HOUSE_PHOTOS = 20;
+export { MAX_HOUSE_PHOTOS };
 
 export type HouseTextFields = {
   title: string;
