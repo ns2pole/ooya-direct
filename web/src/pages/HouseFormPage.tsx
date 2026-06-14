@@ -22,6 +22,7 @@ import {
 import { releasePhotoPreviewUrl, type PendingPhotoEntry } from '../lib/photoFileSelection';
 import { useAuth } from '../context/AuthContext';
 import { usePageHeader } from '../context/PageTitleContext';
+import { houseFormHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
 
@@ -34,10 +35,7 @@ type EditNavState = {
 export function HouseFormPage() {
   const { houseId } = useParams();
   const isNew = houseId === undefined;
-  usePageHeader([
-    { label: 'マイ物件', to: '/landlord' },
-    { label: isNew ? '新規登録' : '編集' },
-  ]);
+  usePageHeader(houseFormHeaderCrumbs(isNew));
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();

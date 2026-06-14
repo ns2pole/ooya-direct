@@ -19,13 +19,13 @@ export function PageTitleProvider({ children }: { children: ReactNode }) {
 }
 
 export function usePageHeader(crumbs: PageHeaderCrumb[]) {
-  const ctx = useContext(PageTitleContext);
+  const setCrumbs = useContext(PageTitleContext)?.setCrumbs;
   const serialized = JSON.stringify(crumbs);
   useEffect(() => {
-    if (!ctx) return;
-    ctx.setCrumbs(JSON.parse(serialized) as PageHeaderCrumb[]);
-    return () => ctx.setCrumbs([]);
-  }, [serialized, ctx]);
+    if (!setCrumbs) return;
+    setCrumbs(JSON.parse(serialized) as PageHeaderCrumb[]);
+    return () => setCrumbs([]);
+  }, [serialized, setCrumbs]);
 }
 
 export function usePageTitle(pageTitle: string) {

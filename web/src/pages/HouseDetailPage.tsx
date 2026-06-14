@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   collection,
   doc,
@@ -18,6 +18,7 @@ import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate } from '../format';
 import { usePageHeader } from '../context/PageTitleContext';
+import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 
 function mapInquiry(id: string, data: Record<string, unknown>): Inquiry {
   return {
@@ -34,16 +35,7 @@ export function HouseDetailPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const headerCrumbs = useMemo(() => {
-    if (house === undefined) {
-      return [{ label: '物件一覧', to: '/' }, { label: '物件詳細' }];
-    }
-    if (house === null) {
-      return [{ label: '物件一覧', to: '/' }, { label: '物件が見つかりません' }];
-    }
-    return [{ label: '物件一覧', to: '/' }, { label: house.title || '（無題）' }];
-  }, [house]);
-  usePageHeader(headerCrumbs);
+  usePageHeader(houseDetailHeaderCrumbs(house));
 
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
