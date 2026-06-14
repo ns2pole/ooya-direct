@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   buildPhotoAdditions,
   MAX_HOUSE_PHOTOS,
@@ -19,9 +20,11 @@ export function PhotoFileInput({
   onAdditions,
   onError,
 }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    e.target.value = '';
+    const input = e.currentTarget;
+    const files = input.files;
     if (!files?.length) return;
 
     const result = buildPhotoAdditions(
@@ -31,6 +34,11 @@ export function PhotoFileInput({
       MAX_HOUSE_PHOTOS
     );
 
+    // Safari: 同じファイルを再選択できるよう、処理後に value をクリア
+    window.setTimeout(() => {
+      input.value = '';
+    }, 0);
+
     if (!result.ok) {
       onError(result.error);
       return;
@@ -39,17 +47,27 @@ export function PhotoFileInput({
     onAdditions(result.additions);
   }
 
+  function openPicker() {
+    if (disabled) return;
+    inputRef.current?.click();
+  }
+
   return (
-    <label className="file-picker">
-      <span className="btn ghost">写真ファイルを選ぶ</span>
+    <div className="file-picker">
+      <button type="button" className="btn ghost" onClick={openPicker} disabled={disabled}>
+        写真ファイルを選ぶ
+      </button>
       <input
+        ref={inputRef}
         type="file"
         accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.gif,.webp"
         multiple
         onChange={handleChange}
         disabled={disabled}
         data-testid="photo-file-input"
+        tabIndex={-1}
+        aria-hidden="true"
       />
-    </label>
+    </div>
   );
 }

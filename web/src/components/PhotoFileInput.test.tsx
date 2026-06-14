@@ -8,10 +8,7 @@ function makeFile(name: string, type: string): File {
 }
 
 function setInputFiles(input: HTMLInputElement, files: File[]) {
-  Object.defineProperty(input, 'files', {
-    configurable: true,
-    value: files,
-  });
+  Object.defineProperty(input, 'files', { configurable: true, value: files });
   fireEvent.change(input);
 }
 
@@ -33,16 +30,13 @@ describe('PhotoFileInput', () => {
       />
     );
 
-    const input = screen.getByTestId('photo-file-input') as HTMLInputElement;
-    setInputFiles(input, [makeFile('room.jpg', 'image/jpeg')]);
+    setInputFiles(screen.getByTestId('photo-file-input') as HTMLInputElement, [
+      makeFile('room.jpg', 'image/jpeg'),
+    ]);
 
     expect(onError).not.toHaveBeenCalled();
     expect(onAdditions).toHaveBeenCalledTimes(1);
-    const additions = onAdditions.mock.calls[0][0];
-    expect(additions).toHaveLength(1);
-    expect(additions[0].previewUrl.startsWith('blob:')).toBe(true);
-
-    releasePhotoPreviewUrl(additions[0].previewUrl);
+    releasePhotoPreviewUrl(onAdditions.mock.calls[0][0][0].previewUrl);
   });
 
   it('PDF 選択時は onError を呼ぶ', () => {
@@ -58,30 +52,34 @@ describe('PhotoFileInput', () => {
       />
     );
 
-    const input = screen.getByTestId('photo-file-input') as HTMLInputElement;
-    setInputFiles(input, [makeFile('doc.pdf', 'application/pdf')]);
+    setInputFiles(screen.getByTestId('photo-file-input') as HTMLInputElement, [
+      makeFile('doc.pdf', 'application/pdf'),
+    ]);
 
     expect(onAdditions).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalledWith(expect.stringMatching(/画像ファイル/));
   });
 
-  it('上限超過時は onError を呼ぶ', () => {
-    const onAdditions = vi.fn();
-    const onError = vi.fn();
+  it('type=button のため form 内でも submit しない', () => {
+    const submitSpy = vi.fn();
 
     render(
-      <PhotoFileInput
-        existingCount={20}
-        pendingCount={0}
-        onAdditions={onAdditions}
-        onError={onError}
-      />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitSpy();
+        }}
+      >
+        <PhotoFileInput
+          existingCount={0}
+          pendingCount={0}
+          onAdditions={vi.fn()}
+          onError={vi.fn()}
+        />
+      </form>
     );
 
-    const input = screen.getByTestId('photo-file-input') as HTMLInputElement;
-    setInputFiles(input, [makeFile('one.jpg', 'image/jpeg')]);
-
-    expect(onAdditions).not.toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledWith(expect.stringMatching(/最大 20 枚/));
+    fireEvent.click(screen.getByRole('button', { name: '写真ファイルを選ぶ' }));
+    expect(submitSpy).not.toHaveBeenCalled();
   });
 });

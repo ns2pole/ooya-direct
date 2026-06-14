@@ -10,13 +10,12 @@ import {
   getTownNamesForPrefAndCity,
 } from '../address/geolonia';
 import { AutocompleteSelect } from '../components/AutocompleteSelect';
-import { PhotoFileInput } from '../components/PhotoFileInput';
+import { HouseFormPhotoSection } from '../components/HouseFormPhotoSection';
 import { AREA_SIZE_OPTIONS } from '../constants/areaSizeOptions';
 import { getDb, isFirebaseConfigured, messageForHouseFormSaveError } from '../firebase';
 import {
   listHousePhotos,
   loadHousePhotosForDisplay,
-  MAX_HOUSE_PHOTOS,
   progressStepLabel,
   saveHouseWithPhotos,
 } from '../lib/housePhotos';
@@ -60,6 +59,9 @@ export function HouseFormPage() {
   const existingPhotosRef = useRef(existingPhotos);
   const removedPhotoIdsRef = useRef(removedPhotoIds);
   const loadedHouseIdRef = useRef<string | null>(null);
+  const navPhotosRef = useRef<HousePhoto[] | null>(
+    (location.state as EditNavState | null)?.photosAfterSave ?? null
+  );
 
   const [prefsData, setPrefsData] = useState<SinglePrefecture[] | null>(null);
   const [prefList, setPrefList] = useState<string[]>([]);
@@ -172,6 +174,15 @@ export function HouseFormPage() {
   }, [townKey, prefecture, city, townCache]);
 
   useEffect(() => {
+    const navPhotos = (location.state as EditNavState | null)?.photosAfterSave;
+    if (navPhotos?.length) {
+      navPhotosRef.current = navPhotos;
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回のみ navigation state を消費
+  }, []);
+
+  useEffect(() => {
     if (!isFirebaseConfigured || isNew || !houseId || !user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 編集モードで一覧から入らない場合のガード
       setLoading(false);
@@ -193,8 +204,9 @@ export function HouseFormPage() {
           return;
         }
         const photos = await loadHousePhotosForDisplay(houseId, data);
-        const navPhotos = (location.state as EditNavState | null)?.photosAfterSave;
+        const navPhotos = navPhotosRef.current;
         const displayPhotos = navPhotos?.length ? navPhotos : photos;
+        if (navPhotos?.length) navPhotosRef.current = null;
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
@@ -215,9 +227,6 @@ export function HouseFormPage() {
           }
           existingPhotosRef.current = displayPhotos;
           setExistingPhotos(displayPhotos);
-          if (navPhotos?.length) {
-            navigate(location.pathname, { replace: true, state: null });
-          }
           setLoadError(null);
           setFormError(null);
           resetSaveStatus();
@@ -234,7 +243,7 @@ export function HouseFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [houseId, isNew, user?.uid, location.pathname, location.state, navigate]);
+  }, [houseId, isNew, user?.uid]);
 
   useEffect(() => {
     return () => {
@@ -243,21 +252,19 @@ export function HouseFormPage() {
   }, []);
 
   const activeExistingPhotos = existingPhotos.filter((p) => !removedPhotoIds.has(p.id));
-  const totalPhotoCount = activeExistingPhotos.length + pendingPhotos.length;
-  const pendingPhotoCount = pendingPhotos.length;
 
-  async function onPhotoFilesChange(additions: PendingPhotoEntry[]) {
+  function handlePendingChange(next: PendingPhotoEntry[]) {
+    const added = next.length - pendingPhotos.length;
     setFormError(null);
     resetSaveStatus();
-    setPendingPhotos((prev) => {
-      const next = [...prev, ...additions];
-      pendingPhotosRef.current = next;
-      return next;
-    });
-    showToast(
-      `${additions.length}枚追加しました。下の「保存」ボタンを押すと登録されます。`,
-      'success'
-    );
+    pendingPhotosRef.current = next;
+    setPendingPhotos(next);
+    if (added > 0) {
+      showToast(
+        `${added}枚追加しました。下の「保存」ボタンを押すと登録されます。`,
+        'success'
+      );
+    }
   }
 
   function onPhotoFilesError(msg: string) {
@@ -556,56 +563,14 @@ export function HouseFormPage() {
             ))}
           </select>
         </label>
-        <div className="field">
-          <span>写真（任意・各 5MB 以下・最大 {MAX_HOUSE_PHOTOS} 枚）</span>
-          <PhotoFileInput
-            existingCount={activeExistingPhotos.length}
-            pendingCount={pendingPhotos.length}
-            disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
-            onAdditions={(additions) => void onPhotoFilesChange(additions)}
-            onError={onPhotoFilesError}
-          />
-          <p className="muted small" style={{ margin: 0 }}>
-            ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。
-            <strong> 追加・削除は「保存」ボタンを押すまで確定しません。</strong>
-            保存後、詳細ページで ‹ › ボタンで切り替えられます。
-            {totalPhotoCount > 0
-              ? ` 登録済み ${activeExistingPhotos.length} 枚` +
-                (pendingPhotoCount > 0 ? ` + 追加予定 ${pendingPhotoCount} 枚` : '')
-              : ''}
-          </p>
-          {totalPhotoCount > 0 ? (
-            <ul className="house-form-photos">
-              {activeExistingPhotos.map((photo) => (
-                <li key={photo.id} className="house-form-photo-item">
-                  <img src={photo.url} alt="" width={140} height={100} />
-                  <button
-                    type="button"
-                    className="house-form-photo-remove"
-                    onClick={() => removeExistingPhoto(photo.id)}
-                    aria-label="この写真を削除"
-                  >
-                    削除
-                  </button>
-                </li>
-              ))}
-              {pendingPhotos.map(({ previewUrl, file }, i) => (
-                <li key={previewUrl} className="house-form-photo-item">
-                  <img src={previewUrl} alt="" width={140} height={100} />
-                  <span className="house-form-photo-badge">新規</span>
-                  <button
-                    type="button"
-                    className="house-form-photo-remove"
-                    onClick={() => removePendingPhoto(i)}
-                    aria-label={`${file.name} を削除`}
-                  >
-                    削除
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        <HouseFormPhotoSection
+          existingPhotos={activeExistingPhotos}
+          pendingPhotos={pendingPhotos}
+          onPendingChange={handlePendingChange}
+          onRemoveExisting={removeExistingPhoto}
+          onRemovePending={removePendingPhoto}
+          onSelectionError={onPhotoFilesError}
+        />
 
         {saveStatus !== 'idle' ? (
           <div
@@ -618,11 +583,6 @@ export function HouseFormPage() {
         ) : null}
 
         {formError ? <p className="text-error">{formError}</p> : null}
-        {pendingPhotoCount > 0 ? (
-          <p className="text-success small" style={{ margin: 0 }}>
-            追加予定 {pendingPhotoCount} 枚があります。「保存」を押してください。
-          </p>
-        ) : null}
         <div className="row">
           <button type="submit" className="btn primary" disabled={saving}>
             {saving ? '保存中…' : '保存'}
