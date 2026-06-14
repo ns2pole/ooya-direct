@@ -20,7 +20,7 @@ export function HouseListPropertySummary({ house }: Props) {
         ))}
         {compactValues.length > 0 ? (
           <div className="house-property-row house-property-row--values-only">
-            <dd>{compactValues.join(' · ')}</dd>
+            <dd>{compactValues.join('\u00a0·\u00a0')}</dd>
           </div>
         ) : null}
       </dl>

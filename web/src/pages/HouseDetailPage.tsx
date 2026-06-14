@@ -182,14 +182,14 @@ export function HouseDetailPage() {
       {photos.length > 0 ? (
         <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}
-      <HousePropertyTable house={house} />
-      <div className="prose">
+      <div className="prose house-detail-description">
         {house.description ? (
           <p style={{ whiteSpace: 'pre-wrap' }}>{house.description}</p>
         ) : (
           <p className="muted">説明文はありません。</p>
         )}
       </div>
+      <HousePropertyTable house={house} />
 
       <section className="stack-lg" aria-labelledby="inquiry-message-label">
         <form className="stack" onSubmit={onSubmitInquiry}>

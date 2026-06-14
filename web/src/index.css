@@ -365,11 +365,15 @@ code {
 
 .house-property-row--values-only {
   grid-template-columns: 1fr;
+  min-width: 0;
 }
 
 .house-property-row--values-only dd {
   margin: 0;
   line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .house-property-table {
@@ -676,6 +680,14 @@ code {
   margin: 0 0 0.5rem;
   font-size: 0.875rem;
   text-align: right;
+}
+
+.house-detail-description {
+  margin: 0.75rem 0 1rem;
+}
+
+.house-detail-description + .house-property-table {
+  margin-top: 0;
 }
 
 .landlord-row {
