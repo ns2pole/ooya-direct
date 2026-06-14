@@ -346,6 +346,17 @@ code {
   background: #fafbff;
 }
 
+.house-carousel-card *,
+.house-carousel-card:hover,
+.house-carousel-card:focus-visible {
+  text-decoration: none;
+}
+
+.house-carousel-card:hover,
+.house-carousel-card:focus-visible {
+  color: inherit;
+}
+
 .house-carousel-card:hover {
   border-color: #c7d2fe;
 }
@@ -385,6 +396,7 @@ code {
 }
 
 .house-carousel-title {
+  font-size: 0.95rem;
   font-weight: 600;
   min-width: 0;
 }
@@ -724,6 +736,7 @@ code {
 }
 
 .house-detail-title {
+  font-size: 0.95rem;
   font-weight: 600;
   min-width: 0;
 }
