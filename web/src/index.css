@@ -356,6 +356,9 @@ code {
   background: #fafbff;
   font-size: 0.9rem;
   line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0;
 }
 
 .house-list-property-compact-item {
