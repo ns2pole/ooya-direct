@@ -97,17 +97,21 @@ VITE_BASE=/ooya-direct/ npm run build
 # 生成された dist/ を任意の方法で GitHub Pages 用ブランチや docs/ に配置
 ```
 
-ルーティングは **HashRouter**（`#/...`）です。ヘッダーにはナビリンクを出さない構成です。直接 URL で開く場合は次のパス（`#` 以降）を使います。
+ルーティングは **HashRouter**（`#/...`）です。ヘッダーにはナビリンクを出さない構成です。
 
-| 画面 | パス（`#` 以降） | 例（リポジトリ名が `ooya-direct` のとき） |
-|------|-------------------|------------------------------------------|
-| 物件一覧（トップ） | `/` | `https://<ユーザー>.github.io/ooya-direct/#/` |
-| 物件詳細 | `/houses/{houseId}` | `https://<ユーザー>.github.io/ooya-direct/#/houses/abc123` |
-| 大家ログイン・マイ物件 | `/landlord` | `https://<ユーザー>.github.io/ooya-direct/#/landlord` |
-| 物件の新規登録 | `/landlord/houses/new` | `https://<ユーザー>.github.io/ooya-direct/#/landlord/houses/new` |
-| 物件の編集 | `/landlord/houses/{houseId}/edit` | `https://<ユーザー>.github.io/ooya-direct/#/landlord/houses/abc123/edit` |
+**公開 URL（GitHub Pages）:** [https://ns2pole.github.io/ooya-direct/#/](https://ns2pole.github.io/ooya-direct/#/)
 
-ローカル開発（`npm run dev`）でも同じく `http://localhost:5173/#/landlord` のように `#` 以降で指定します。
+直接 URL で開く場合は、上記の `#` 以降を付け替えます。
+
+| 画面 | パス（`#` 以降） | URL |
+|------|-------------------|-----|
+| 物件一覧（トップ） | `/` | `https://ns2pole.github.io/ooya-direct/#/` |
+| 物件詳細 | `/houses/{houseId}` | `https://ns2pole.github.io/ooya-direct/#/houses/{houseId}` |
+| 大家ログイン・マイ物件 | `/landlord` | `https://ns2pole.github.io/ooya-direct/#/landlord` |
+| 物件の新規登録 | `/landlord/houses/new` | `https://ns2pole.github.io/ooya-direct/#/landlord/houses/new` |
+| 物件の編集 | `/landlord/houses/{houseId}/edit` | `https://ns2pole.github.io/ooya-direct/#/landlord/houses/{houseId}/edit` |
+
+ローカル開発（`npm run dev`）でも `#` 以降は同じです（例: `http://localhost:5173/#/landlord`）。
 
 ## データモデル
 
@@ -134,7 +138,7 @@ VITE_BASE=/ooya-direct/ npm run build
    - **Firestore** → `houses` → 対象 `{houseId}` → **サブコレクション `photos`**
    - 1 枚ごとにドキュメントが増え、`url` / `order` / `createdAt` が入っている
    - 親ドキュメントの `coverPhotoUrl` は先頭写真の URL（一覧サムネ用）
-6. **公開ページ**（物件詳細）で 2 枚以上なら ‹ › と `2 / N` 表示
+6. **公開ページ**（物件詳細）で写真が **1 行最大 3 枚** ずつ同時表示される
 
 **うまくいかないとき**
 

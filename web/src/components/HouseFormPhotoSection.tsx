@@ -41,7 +41,7 @@ export function HouseFormPhotoSection({
       <p className="muted small" style={{ margin: 0 }}>
         ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。
         <strong> 追加・削除は「保存」ボタンを押すまで確定しません。</strong>
-        保存後、詳細ページで ‹ › ボタンで切り替えられます。
+        保存後、詳細ページで最大 3 枚ずつ一覧表示されます。
         {totalCount > 0
           ? ` 登録済み ${activeExisting.length} 枚` +
             (pendingCount > 0 ? ` + 追加予定 ${pendingCount} 枚` : '')

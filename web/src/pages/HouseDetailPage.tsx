@@ -12,7 +12,7 @@ import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
-import { HousePhotoCarousel } from '../components/HousePhotoCarousel';
+import { HousePhotoGrid } from '../components/HousePhotoGrid';
 import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
@@ -200,7 +200,7 @@ export function HouseDetailPage() {
         </p>
       ) : null}
       {photos.length > 0 ? (
-        <HousePhotoCarousel photos={photoUrlsFromList(photos)} title={house.title} />
+        <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}
       <div className="prose">
         {house.description ? (
@@ -211,26 +211,7 @@ export function HouseDetailPage() {
       </div>
 
       <section className="stack-lg" aria-labelledby="inquiries-heading">
-        <h2 id="inquiries-heading">公開の問い合わせ</h2>
-        <p className="muted small">
-          下記の問い合わせ板は誰でも閲覧可能です。個人情報の記載には十分ご配慮下さい。
-        </p>
-
-        {inquiries.length === 0 ? (
-          <p className="muted">まだ問い合わせはありません。</p>
-        ) : (
-          <ul className="inquiry-list">
-            {inquiries.map((q) => (
-              <li key={q.id} className="inquiry-item">
-                <div className="inquiry-meta">
-                  <strong>{q.displayName || '匿名'}</strong>
-                  <span className="muted">{formatDate(q.createdAt)}</span>
-                </div>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{q.message}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <h2 id="inquiries-heading">問い合わせ</h2>
 
         <form className="stack" onSubmit={onSubmitInquiry}>
           <h3>問い合わせを送る</h3>
@@ -259,6 +240,26 @@ export function HouseDetailPage() {
             {submitting ? '送信中…' : '送信'}
           </button>
         </form>
+
+        <p className="muted small">
+          下記の問い合わせ板は誰でも閲覧可能です。個人情報の記載にはご配慮下さい。
+        </p>
+
+        {inquiries.length === 0 ? (
+          <p className="muted">まだ問い合わせはありません。</p>
+        ) : (
+          <ul className="inquiry-list">
+            {inquiries.map((q) => (
+              <li key={q.id} className="inquiry-item">
+                <div className="inquiry-meta">
+                  <strong>{q.displayName || '匿名'}</strong>
+                  <span className="muted">{formatDate(q.createdAt)}</span>
+                </div>
+                <p style={{ whiteSpace: 'pre-wrap' }}>{q.message}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </article>
   );
