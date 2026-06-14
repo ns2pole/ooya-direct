@@ -515,29 +515,31 @@ export function HouseFormPage() {
             住所候補の取得に失敗しました: {addressLoadError}（手入力のまま保存できます）
           </p>
         ) : null}
-        <AutocompleteSelect
-          label="都道府県"
-          value={prefecture}
-          onChange={(next) => {
-            setPrefecture(next);
-            setCity('');
-            setTown('');
-          }}
-          options={prefList}
-          loading={loadingPrefs}
-          placeholder="例: 東京都"
-        />
-        <AutocompleteSelect
-          label="市区町村"
-          value={city}
-          onChange={(next) => {
-            setCity(next);
-            setTown('');
-          }}
-          options={cityList}
-          disabled={!prefecture}
-          placeholder={prefecture ? '例: 新宿区' : '先に都道府県を選んでください'}
-        />
+        <div className="field-row">
+          <AutocompleteSelect
+            label="都道府県"
+            value={prefecture}
+            onChange={(next) => {
+              setPrefecture(next);
+              setCity('');
+              setTown('');
+            }}
+            options={prefList}
+            loading={loadingPrefs}
+            placeholder="例: 東京都"
+          />
+          <AutocompleteSelect
+            label="市区町村"
+            value={city}
+            onChange={(next) => {
+              setCity(next);
+              setTown('');
+            }}
+            options={cityList}
+            disabled={!prefecture}
+            placeholder={prefecture ? '例: 新宿区' : '先に都道府県'}
+          />
+        </div>
         <AutocompleteSelect
           label="町名（大字・丁目など）"
           value={town}
