@@ -49,6 +49,18 @@ const DETAIL_SPECS: { key: keyof HousePropertyFields; label: string }[] = [
   { key: 'buildingAge', label: '築年数' },
 ];
 
+const LIST_ROW_KEYS = ['rent', 'managementFee', 'depositKeyMoney'] as const satisfies readonly (keyof HousePropertyFields)[];
+const LIST_COMPACT_KEYS = ['areaSize', 'floors', 'buildingAge'] as const satisfies readonly (keyof HousePropertyFields)[];
+
+function labelForKey(key: keyof HousePropertyFields): string {
+  return DETAIL_SPECS.find((s) => s.key === key)?.label ?? key;
+}
+
+export type HouseListPropertySummary = {
+  rows: DetailRow[];
+  compactParts: DetailRow[];
+};
+
 export function readHousePropertyFields(data: Record<string, unknown>): HousePropertyFields {
   return {
     rent: String(data.rent ?? ''),
@@ -84,6 +96,21 @@ export function housePropertyDetailRows(h: House): DetailRow[] {
   const location = houseLocationLine(h);
   if (location) rows.push({ label: '地域', value: location });
   return rows;
+}
+
+/** 物件一覧カルーセル用: 家賃等は行、間取り・階建・築年数は1行にまとめる */
+export function housePropertyListSummary(h: House): HouseListPropertySummary {
+  const rows: DetailRow[] = [];
+  for (const key of LIST_ROW_KEYS) {
+    const row = rowIfValue(labelForKey(key), h[key]);
+    if (row) rows.push(row);
+  }
+  const compactParts: DetailRow[] = [];
+  for (const key of LIST_COMPACT_KEYS) {
+    const row = rowIfValue(labelForKey(key), h[key]);
+    if (row) compactParts.push(row);
+  }
+  return { rows, compactParts };
 }
 
 export function housePropertyListChips(h: House): string[] {

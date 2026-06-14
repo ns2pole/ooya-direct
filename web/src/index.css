@@ -340,8 +340,40 @@ code {
   font-weight: 600;
 }
 
-.house-carousel-body .house-property-table {
+.house-carousel-body .house-list-property {
   margin: 0.25rem 0 0.5rem;
+}
+
+.house-list-property-table {
+  margin: 0;
+}
+
+.house-list-property-compact {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fafbff;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.house-list-property-compact-item {
+  white-space: nowrap;
+}
+
+.house-list-property-compact-label {
+  color: var(--muted);
+  margin-right: 0.2rem;
+}
+
+.house-list-property-compact-value {
+  font-weight: 600;
+}
+
+.house-list-property-compact-sep {
+  color: var(--muted);
+  font-weight: 400;
 }
 
 .house-carousel-date {

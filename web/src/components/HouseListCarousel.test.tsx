@@ -60,7 +60,7 @@ describe('HouseListCarousel', () => {
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
   });
 
-  it('物件条件をテーブル表示する', () => {
+  it('物件条件を一覧用に表示する', () => {
     render(
       <MemoryRouter>
         <HouseListCarousel houses={[mockHouse('h1', 'テスト物件1')]} />
@@ -71,7 +71,8 @@ describe('HouseListCarousel', () => {
     expect(screen.getByText('6万円')).toBeInTheDocument();
     expect(screen.getByText('間取り')).toBeInTheDocument();
     expect(screen.getByText('3LDK')).toBeInTheDocument();
-    expect(screen.getByText('地域')).toBeInTheDocument();
+    expect(screen.queryByText('ジャンル')).not.toBeInTheDocument();
+    expect(screen.queryByText('地域')).not.toBeInTheDocument();
   });
 
   it('カード全体が詳細ページへのリンク', () => {

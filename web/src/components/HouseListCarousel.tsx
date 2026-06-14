@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { House } from '../types';
 import { houseCoverPhoto } from '../lib/mapHouse';
 import { clampCarouselIndex, houseListSummaryLines } from '../lib/houseListSummary';
-import { HousePropertyTable } from './HousePropertyTable';
+import { HouseListPropertySummary } from './HouseListPropertySummary';
 
 type Props = {
   houses: House[];
@@ -99,7 +99,7 @@ export function HouseListCarousel({ houses }: Props) {
         </div>
         <div className="house-carousel-body">
           <h2 className="house-carousel-title">{summary.title}</h2>
-          <HousePropertyTable house={house} />
+          <HouseListPropertySummary house={house} />
           <p className="muted house-carousel-date">掲載: {summary.listedDate}</p>
         </div>
       </Link>
