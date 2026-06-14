@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
-import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
 
 export function HomePage() {
@@ -82,12 +82,14 @@ export function HomePage() {
         </div>
       ) : (
         <ul className="house-list">
-          {houses.map((h) => (
+          {houses.map((h) => {
+            const cover = houseCoverPhoto(h);
+            return (
             <li key={h.id}>
               <Link to={`/houses/${h.id}`} className="house-card">
-                {h.photoUrl ? (
+                {cover ? (
                   <img
-                    src={h.photoUrl}
+                    src={cover}
                     alt=""
                     className="house-card-thumb"
                     width={112}
@@ -113,7 +115,8 @@ export function HomePage() {
                 </span>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </section>

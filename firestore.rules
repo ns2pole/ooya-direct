@@ -8,7 +8,7 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt',
+          'ownerId', 'title', 'description', 'photoUrl', 'photoUrls', 'createdAt', 'updatedAt',
           'prefecture', 'city', 'town', 'rent', 'areaSize'
         ])
         && request.resource.data.prefecture is string
@@ -25,13 +25,16 @@ service cloud.firestore {
           || (request.resource.data.photoUrl is string
             && request.resource.data.photoUrl.size() > 0
             && request.resource.data.photoUrl.size() < 2048
-            && request.resource.data.photoUrl.matches('https://.*')));
+            && request.resource.data.photoUrl.matches('https://.*')))
+        && (!('photoUrls' in request.resource.data)
+          || (request.resource.data.photoUrls is list
+            && request.resource.data.photoUrls.size() <= 20));
 
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'title', 'description', 'photoUrl', 'createdAt', 'updatedAt',
+          'ownerId', 'title', 'description', 'photoUrl', 'photoUrls', 'createdAt', 'updatedAt',
           'prefecture', 'city', 'town', 'rent', 'areaSize'
         ])
         && request.resource.data.prefecture is string
@@ -48,7 +51,10 @@ service cloud.firestore {
           || (request.resource.data.photoUrl is string
             && request.resource.data.photoUrl.size() > 0
             && request.resource.data.photoUrl.size() < 2048
-            && request.resource.data.photoUrl.matches('https://.*')));
+            && request.resource.data.photoUrl.matches('https://.*')))
+        && (!('photoUrls' in request.resource.data)
+          || (request.resource.data.photoUrls is list
+            && request.resource.data.photoUrls.size() <= 20));
 
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;

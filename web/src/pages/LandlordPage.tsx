@@ -13,7 +13,7 @@ import { getDb, isFirebaseConfigured } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { House } from '../types';
-import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
 
 function messageForAuthCode(code: string): string {
@@ -199,12 +199,14 @@ export function LandlordPage() {
         <p className="muted">まだ物件がありません。「新規登録」から追加してください。</p>
       ) : (
         <ul className="house-list">
-          {houses.map((h) => (
+          {houses.map((h) => {
+            const cover = houseCoverPhoto(h);
+            return (
             <li key={h.id} className="landlord-row">
               <div className="landlord-row-head">
-                {h.photoUrl ? (
+                {cover ? (
                   <img
-                    src={h.photoUrl}
+                    src={cover}
                     alt=""
                     className="landlord-thumb"
                     width={72}
@@ -241,7 +243,8 @@ export function LandlordPage() {
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </section>

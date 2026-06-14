@@ -12,6 +12,7 @@ import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
+import { HousePhotoCarousel } from '../components/HousePhotoCarousel';
 import type { House, Inquiry } from '../types';
 import { mapHouse, houseLocationLine } from '../lib/mapHouse';
 import { formatDate } from '../format';
@@ -192,18 +193,8 @@ export function HouseDetailPage() {
             .join(' · ')}
         </p>
       ) : null}
-      {house.photoUrl ? (
-        <div className="house-hero">
-          <img
-            src={house.photoUrl}
-            alt={house.title ? `${house.title}の画像` : '物件の画像'}
-            className="house-hero-img"
-            width={800}
-            height={450}
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
+      {house.photoUrls.length > 0 ? (
+        <HousePhotoCarousel photos={house.photoUrls} title={house.title} />
       ) : null}
       <div className="prose">
         {house.description ? (

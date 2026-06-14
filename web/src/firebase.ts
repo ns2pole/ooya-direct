@@ -2,7 +2,14 @@ import { initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/
 import { getAuth, type Auth } from 'firebase/auth';
 import { initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
-import { getDownloadURL, getStorage, ref, uploadBytes, type FirebaseStorage } from 'firebase/storage';
+import {
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytes,
+  type FirebaseStorage,
+} from 'firebase/storage';
 
 export const FUNCTIONS_REGION = 'asia-northeast1';
 
@@ -134,16 +141,32 @@ export function getStorageApp(): FirebaseStorage {
   return storageInstance;
 }
 
-const COVER_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+const PHOTO_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 
-/** 物件の代表画像を Storage に保存し、ダウンロード URL を返す */
-export async function uploadHouseCoverImage(houseId: string, file: File): Promise<string> {
+function photoExtension(file: File): string {
   const raw = file.name.split('.').pop()?.toLowerCase();
-  const ext = raw && COVER_EXT.has(raw) ? raw : 'jpg';
-  const path = `houses/${houseId}/cover.${ext}`;
+  return raw && PHOTO_EXT.has(raw) ? raw : 'jpg';
+}
+
+function photoContentType(file: File, ext: string): string {
+  if (file.type && file.type.startsWith('image/')) return file.type;
+  return `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+}
+
+/** 物件の写真を Storage に保存し、ダウンロード URL を返す */
+export async function uploadHousePhoto(houseId: string, file: File): Promise<string> {
+  const ext = photoExtension(file);
+  const id = crypto.randomUUID();
+  const path = `houses/${houseId}/photos/${id}.${ext}`;
   const storageRef = ref(getStorageApp(), path);
   await uploadBytes(storageRef, file, {
-    contentType: file.type && file.type.startsWith('image/') ? file.type : `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    contentType: photoContentType(file, ext),
   });
   return getDownloadURL(storageRef);
+}
+
+/** Storage 上の物件写真を URL から削除する（失敗時は呼び出し側で無視可） */
+export async function deleteHousePhotoByUrl(downloadUrl: string): Promise<void> {
+  const storageRef = ref(getStorageApp(), downloadUrl);
+  await deleteObject(storageRef);
 }

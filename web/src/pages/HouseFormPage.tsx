@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   addDoc,
   collection,
+  deleteField,
   doc,
   getDoc,
   serverTimestamp,
@@ -22,7 +23,8 @@ import {
   getDb,
   isFirebaseConfigured,
   messageForHouseFormSaveError,
-  uploadHouseCoverImage,
+  deleteHousePhotoByUrl,
+  uploadHousePhoto,
 } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -41,9 +43,9 @@ export function HouseFormPage() {
   const [town, setTown] = useState('');
   const [rent, setRent] = useState('');
   const [areaSize, setAreaSize] = useState('');
-  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
+  const [removedPhotoUrls, setRemovedPhotoUrls] = useState<Set<string>>(() => new Set());
+  const [pendingPhotos, setPendingPhotos] = useState<{ file: File; previewUrl: string }[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export function HouseFormPage() {
   const townList = townKey ? (townCache[townKey] ?? []) : [];
 
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  const MAX_PHOTOS = 20;
 
   useEffect(() => {
     let cancelled = false;
@@ -142,10 +145,21 @@ export function HouseFormPage() {
           setRent(String(data.rent ?? ''));
           const rawArea = String(data.areaSize ?? '').trim();
           setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
-          const p = data.photoUrl;
-          setExistingPhotoUrl(
-            typeof p === 'string' && p.trim() !== '' ? p.trim() : null
-          );
+          const rawList = data.photoUrls;
+          if (Array.isArray(rawList)) {
+            setExistingPhotoUrls(
+              rawList
+                .filter((u): u is string => typeof u === 'string' && u.trim() !== '')
+                .map((u) => u.trim())
+            );
+          } else {
+            const p = data.photoUrl;
+            setExistingPhotoUrls(
+              typeof p === 'string' && p.trim() !== '' ? [p.trim()] : []
+            );
+          }
+          setRemovedPhotoUrls(new Set());
+          setPendingPhotos([]);
           setError(null);
         }
       } catch (e) {
@@ -164,28 +178,75 @@ export function HouseFormPage() {
 
   useEffect(() => {
     return () => {
-      if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+      pendingPhotos.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
     };
-  }, [coverPreviewUrl]);
+  }, [pendingPhotos]);
 
-  function onCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  const activeExistingUrls = existingPhotoUrls.filter((u) => !removedPhotoUrls.has(u));
+  const totalPhotoCount = activeExistingUrls.length + pendingPhotos.length;
+
+  function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
     e.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('画像ファイル（JPEG / PNG / GIF / WebP）を選んでください。');
+    if (!files?.length) return;
+
+    const additions: { file: File; previewUrl: string }[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) {
+        setError('画像ファイル（JPEG / PNG / GIF / WebP）を選んでください。');
+        return;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setError('画像は 5MB 以下にしてください。');
+        return;
+      }
+      additions.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+
+    if (totalPhotoCount + additions.length > MAX_PHOTOS) {
+      additions.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      setError(`写真は最大 ${MAX_PHOTOS} 枚までです。`);
       return;
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('画像は 5MB 以下にしてください。');
-      return;
-    }
+
     setError(null);
-    setCoverFile(file);
-    setCoverPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
+    setPendingPhotos((prev) => [...prev, ...additions]);
+  }
+
+  function removeExistingPhoto(url: string) {
+    setRemovedPhotoUrls((prev) => new Set(prev).add(url));
+  }
+
+  function removePendingPhoto(index: number) {
+    setPendingPhotos((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return next;
     });
+  }
+
+  async function buildPhotoUrls(houseDocId: string): Promise<string[]> {
+    const kept = existingPhotoUrls.filter((u) => !removedPhotoUrls.has(u));
+    const uploaded: string[] = [];
+    for (const { file } of pendingPhotos) {
+      uploaded.push(await uploadHousePhoto(houseDocId, file));
+    }
+    return [...kept, ...uploaded];
+  }
+
+  async function deleteRemovedPhotosFromStorage(): Promise<void> {
+    const tasks = [...removedPhotoUrls]
+      .filter((url) => existingPhotoUrls.includes(url))
+      .map((url) => deleteHousePhotoByUrl(url).catch(() => undefined));
+    await Promise.all(tasks);
+  }
+
+  function photoFields(urls: string[]): Record<string, unknown> {
+    if (urls.length === 0) {
+      return { photoUrls: deleteField(), photoUrl: deleteField() };
+    }
+    return { photoUrls: urls, photoUrl: urls[0] };
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -207,16 +268,18 @@ export function HouseFormPage() {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        if (coverFile) {
-          const photoUrl = await uploadHouseCoverImage(ref.id, coverFile);
+        if (pendingPhotos.length > 0) {
+          const photoUrls = await buildPhotoUrls(ref.id);
           await updateDoc(doc(getDb(), 'houses', ref.id), {
-            photoUrl,
+            ...photoFields(photoUrls),
             updatedAt: serverTimestamp(),
           });
         }
         showToast('物件を登録しました。', 'success');
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
+        const photoUrls = await buildPhotoUrls(houseId);
+        await deleteRemovedPhotosFromStorage();
         const payload: Record<string, unknown> = {
           title: title.trim(),
           description: description.trim(),
@@ -226,10 +289,8 @@ export function HouseFormPage() {
           rent: rent.trim(),
           areaSize: areaSize.trim(),
           updatedAt: serverTimestamp(),
+          ...photoFields(photoUrls),
         };
-        if (coverFile) {
-          payload.photoUrl = await uploadHouseCoverImage(houseId, coverFile);
-        }
         await updateDoc(doc(getDb(), 'houses', houseId), payload);
         showToast('保存しました。', 'success');
         navigate('/landlord');
@@ -371,23 +432,47 @@ export function HouseFormPage() {
           </select>
         </label>
         <div className="field">
-          <span>代表画像（任意・5MB 以下）</span>
+          <span>写真（任意・各 5MB 以下・最大 {MAX_PHOTOS} 枚）</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={onCoverFileChange}
+            multiple
+            onChange={onPhotoFilesChange}
+            disabled={totalPhotoCount >= MAX_PHOTOS}
           />
           <p className="muted small" style={{ margin: 0 }}>
-            物件一覧・詳細ページに表示されます。編集で選び直すと差し替わります。
+            物件詳細ページで ‹ › ボタンで切り替えて閲覧できます。先頭の写真が一覧のサムネイルになります。
           </p>
-          {coverPreviewUrl ? (
-            <div className="house-form-preview">
-              <img src={coverPreviewUrl} alt="" width={280} height={160} />
-            </div>
-          ) : existingPhotoUrl ? (
-            <div className="house-form-preview">
-              <img src={existingPhotoUrl} alt="" width={280} height={160} />
-            </div>
+          {totalPhotoCount > 0 ? (
+            <ul className="house-form-photos">
+              {activeExistingUrls.map((url) => (
+                <li key={url} className="house-form-photo-item">
+                  <img src={url} alt="" width={140} height={100} />
+                  <button
+                    type="button"
+                    className="house-form-photo-remove"
+                    onClick={() => removeExistingPhoto(url)}
+                    aria-label="この写真を削除"
+                  >
+                    削除
+                  </button>
+                </li>
+              ))}
+              {pendingPhotos.map(({ previewUrl, file }, i) => (
+                <li key={previewUrl} className="house-form-photo-item">
+                  <img src={previewUrl} alt="" width={140} height={100} />
+                  <span className="house-form-photo-badge">新規</span>
+                  <button
+                    type="button"
+                    className="house-form-photo-remove"
+                    onClick={() => removePendingPhoto(i)}
+                    aria-label={`${file.name} を削除`}
+                  >
+                    削除
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
         {error ? <p className="text-error">{error}</p> : null}

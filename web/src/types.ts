@@ -5,8 +5,8 @@ export type House = {
   ownerId: string;
   title: string;
   description: string;
-  /** Firebase Storage の代表画像 URL（未設定のときは null） */
-  photoUrl: string | null;
+  /** Firebase Storage の画像 URL 一覧（先頭が代表・一覧サムネイル） */
+  photoUrls: string[];
   /** 都道府県名 */
   prefecture: string;
   /** 市区町村名（政令都市は区まで含む文字列） */
