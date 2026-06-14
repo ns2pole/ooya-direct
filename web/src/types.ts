@@ -27,8 +27,20 @@ export type House = {
   town: string;
   /** 家賃（表示用テキスト） */
   rent: string;
+  /** 管理費等（表示用テキスト） */
+  managementFee: string;
+  /** ジャンル（マンション / アパート など） */
+  genre: string;
+  /** 敷金・礼金（表示用テキスト） */
+  depositKeyMoney: string;
   /** 間取り（セレクト値、例: 1K / 5DK） */
   areaSize: string;
+  /** 専有面積など（表示用テキスト） */
+  floorArea: string;
+  /** 階建・所在階（表示用テキスト） */
+  floors: string;
+  /** 築年数（表示用テキスト） */
+  buildingAge: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };

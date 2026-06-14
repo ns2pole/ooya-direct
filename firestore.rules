@@ -39,7 +39,9 @@ service cloud.firestore {
           'ownerId', 'title', 'description', 'coverPhotoUrl',
           'photoUrl', 'photoUrls',
           'createdAt', 'updatedAt',
-          'prefecture', 'city', 'town', 'rent', 'areaSize'
+          'prefecture', 'city', 'town',
+          'rent', 'managementFee', 'genre', 'depositKeyMoney',
+          'areaSize', 'floorArea', 'floors', 'buildingAge'
         ])
         && request.resource.data.prefecture is string
         && request.resource.data.prefecture.size() <= 30
@@ -49,8 +51,20 @@ service cloud.firestore {
         && request.resource.data.town.size() <= 200
         && request.resource.data.rent is string
         && request.resource.data.rent.size() <= 50
+        && request.resource.data.managementFee is string
+        && request.resource.data.managementFee.size() <= 50
+        && request.resource.data.genre is string
+        && request.resource.data.genre.size() <= 30
+        && request.resource.data.depositKeyMoney is string
+        && request.resource.data.depositKeyMoney.size() <= 50
         && request.resource.data.areaSize is string
         && request.resource.data.areaSize.size() <= 50
+        && request.resource.data.floorArea is string
+        && request.resource.data.floorArea.size() <= 50
+        && request.resource.data.floors is string
+        && request.resource.data.floors.size() <= 50
+        && request.resource.data.buildingAge is string
+        && request.resource.data.buildingAge.size() <= 50
         && validCoverPhotoUrl()
         && validLegacyPhotoUrl()
         && validLegacyPhotoUrls();

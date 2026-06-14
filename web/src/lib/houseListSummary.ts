@@ -1,4 +1,4 @@
-import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
+import { housePropertyListChips } from './housePropertyFields';
 import { formatDateOnly } from '../format';
 import type { House } from '../types';
 import { houseLocationLine } from './mapHouse';
@@ -6,18 +6,15 @@ import { houseLocationLine } from './mapHouse';
 export type HouseListSummary = {
   title: string;
   location: string;
-  rent: string | null;
-  areaSize: string | null;
+  chips: string[];
   listedDate: string;
 };
 
 export function houseListSummaryLines(h: House): HouseListSummary {
-  const location = houseLocationLine(h);
   return {
     title: h.title.trim() || '（無題）',
-    location,
-    rent: h.rent.trim() ? `家賃 ${h.rent.trim()}` : null,
-    areaSize: isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : null,
+    location: houseLocationLine(h),
+    chips: housePropertyListChips(h),
     listedDate: formatDateOnly(h.createdAt),
   };
 }

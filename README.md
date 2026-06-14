@@ -115,7 +115,7 @@ VITE_BASE=/ooya-direct/ npm run build
 
 ## データモデル
 
-- `houses/{houseId}` … `ownerId`, `title`, `description`, `coverPhotoUrl`（一覧サムネ用）, 住所・家賃など, `createdAt`, `updatedAt`
+- `houses/{houseId}` … `ownerId`, `title`, `description`, `coverPhotoUrl`, 住所（`prefecture` / `city` / `town`）, `rent`, `managementFee`, `genre`, `depositKeyMoney`, `areaSize`, `floorArea`, `floors`, `buildingAge`, `createdAt`, `updatedAt`
 - `houses/{houseId}/photos/{photoId}` … `url`, `order`, `label`, `createdAt`（物件 1 : 画像 N）
 - `houses/{houseId}/inquiries/{inquiryId}` … `message`, `createdAt`（書き込みは Functions のみ）
 

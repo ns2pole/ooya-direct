@@ -12,9 +12,9 @@ import { Link } from 'react-router-dom';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import { deleteAllHousePhotos } from '../lib/housePhotos';
 import { useAuth } from '../context/AuthContext';
-import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
+import { housePropertyListChips } from '../lib/housePropertyFields';
 import type { House } from '../types';
-import { mapHouse, houseCoverPhoto, houseLocationLine } from '../lib/mapHouse';
+import { mapHouse, houseCoverPhoto } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
 import { usePageTitle } from '../context/PageTitleContext';
 
@@ -206,9 +206,7 @@ export function LandlordPage() {
                   <strong>{h.title || '（無題）'}</strong>
                   <div className="muted landlord-row-meta">
                     {[
-                      houseLocationLine(h),
-                      h.rent ? `家賃 ${h.rent}` : '',
-                      isKnownLayoutAreaSize(h.areaSize) ? h.areaSize : '',
+                      ...housePropertyListChips(h),
                       formatDateOnly(h.updatedAt ?? h.createdAt),
                     ]
                       .filter(Boolean)

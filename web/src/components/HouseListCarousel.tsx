@@ -99,10 +99,11 @@ export function HouseListCarousel({ houses }: Props) {
         <div className="house-carousel-body">
           <h2 className="house-carousel-title">{summary.title}</h2>
           {summary.location ? <p className="house-carousel-location">{summary.location}</p> : null}
-          {summary.rent || summary.areaSize ? (
+          {summary.chips.length > 0 ? (
             <div className="house-carousel-facts">
-              {summary.rent ? <span>{summary.rent}</span> : null}
-              {summary.areaSize ? <span>{summary.areaSize}</span> : null}
+              {summary.chips.map((chip) => (
+                <span key={chip}>{chip}</span>
+              ))}
             </div>
           ) : null}
           <p className="muted house-carousel-date">掲載: {summary.listedDate}</p>

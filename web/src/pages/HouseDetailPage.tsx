@@ -11,10 +11,10 @@ import { Link, useParams } from 'react-router-dom';
 import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
-import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import { HousePhotoGrid } from '../components/HousePhotoGrid';
+import { HousePropertyTable } from '../components/HousePropertyTable';
 import type { House, HousePhoto, Inquiry } from '../types';
-import { mapHouse, houseLocationLine } from '../lib/mapHouse';
+import { mapHouse } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
 import { formatDate } from '../format';
 import { usePageHeader } from '../context/PageTitleContext';
@@ -179,19 +179,7 @@ export function HouseDetailPage() {
   return (
     <article className="panel">
       <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
-      {houseLocationLine(house) ||
-      house.rent ||
-      (house.areaSize && isKnownLayoutAreaSize(house.areaSize)) ? (
-        <p className="muted small">
-          {[
-            houseLocationLine(house),
-            house.rent ? `家賃 ${house.rent}` : '',
-            isKnownLayoutAreaSize(house.areaSize) ? house.areaSize : '',
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      ) : null}
+      <HousePropertyTable house={house} />
       {photos.length > 0 ? (
         <HousePhotoGrid photos={photoUrlsFromList(photos)} title={house.title} />
       ) : null}

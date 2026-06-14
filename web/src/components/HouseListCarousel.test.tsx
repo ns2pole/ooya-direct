@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { House } from '../types';
 import { HouseListCarousel } from './HouseListCarousel';
+import { EMPTY_HOUSE_PROPERTY_FIELDS } from '../lib/housePropertyFields';
 
 function mockHouse(id: string, title: string): House {
   return {
@@ -14,6 +15,7 @@ function mockHouse(id: string, title: string): House {
     prefecture: '三重県',
     city: '名張市',
     town: 'テスト町',
+    ...EMPTY_HOUSE_PROPERTY_FIELDS,
     rent: '6万円',
     areaSize: '3LDK',
     createdAt: null,

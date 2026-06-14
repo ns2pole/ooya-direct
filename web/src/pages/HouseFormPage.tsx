@@ -11,7 +11,7 @@ import {
 } from '../address/geolonia';
 import { AutocompleteSelect } from '../components/AutocompleteSelect';
 import { HouseFormPhotoSection } from '../components/HouseFormPhotoSection';
-import { AREA_SIZE_OPTIONS } from '../constants/areaSizeOptions';
+import { HousePropertyFormFields } from '../components/HousePropertyFormFields';
 import { getDb, isFirebaseConfigured, messageForHouseFormSaveError } from '../firebase';
 import {
   listHousePhotos,
@@ -24,6 +24,13 @@ import { useAuth } from '../context/AuthContext';
 import { usePageHeader } from '../context/PageTitleContext';
 import { houseFormHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 import { useToast } from '../context/ToastContext';
+import {
+  EMPTY_HOUSE_PROPERTY_FIELDS,
+  readHousePropertyFields,
+  type HousePropertyFields,
+  housePropertyFieldsToPayload,
+} from '../lib/housePropertyFields';
+import { isKnownLayoutAreaSize } from '../constants/areaSizeOptions';
 import type { HousePhoto } from '../types';
 
 type SaveStatus = 'idle' | 'saving' | 'success' | 'error';
@@ -46,8 +53,9 @@ export function HouseFormPage() {
   const [prefecture, setPrefecture] = useState('');
   const [city, setCity] = useState('');
   const [town, setTown] = useState('');
-  const [rent, setRent] = useState('');
-  const [areaSize, setAreaSize] = useState('');
+  const [propertyFields, setPropertyFields] = useState<HousePropertyFields>(
+    EMPTY_HOUSE_PROPERTY_FIELDS
+  );
   const [existingPhotos, setExistingPhotos] = useState<HousePhoto[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<Set<string>>(() => new Set());
   const [pendingPhotos, setPendingPhotos] = useState<{ file: File; previewUrl: string }[]>([]);
@@ -107,6 +115,10 @@ export function HouseFormPage() {
     clearPendingPhotos();
   }
 
+  function onPropertyFieldChange(key: keyof HousePropertyFields, value: string) {
+    setPropertyFields((prev) => ({ ...prev, [key]: value }));
+  }
+
   function textFields() {
     return {
       title,
@@ -114,8 +126,7 @@ export function HouseFormPage() {
       prefecture,
       city,
       town,
-      rent,
-      areaSize,
+      ...propertyFields,
     };
   }
 
@@ -216,9 +227,12 @@ export function HouseFormPage() {
           setPrefecture(String(data.prefecture ?? ''));
           setCity(String(data.city ?? ''));
           setTown(String(data.town ?? ''));
-          setRent(String(data.rent ?? ''));
-          const rawArea = String(data.areaSize ?? '').trim();
-          setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
+          const loadedProps = readHousePropertyFields(data);
+          const rawArea = loadedProps.areaSize.trim();
+          setPropertyFields({
+            ...loadedProps,
+            areaSize: isKnownLayoutAreaSize(rawArea) ? rawArea : '',
+          });
           if (loadedHouseIdRef.current !== houseId) {
             pendingPhotosRef.current.forEach(({ previewUrl }) => releasePreviewUrl(previewUrl));
             pendingPhotosRef.current = [];
@@ -353,8 +367,7 @@ export function HouseFormPage() {
           prefecture: prefecture.trim(),
           city: city.trim(),
           town: town.trim(),
-          rent: rent.trim(),
-          areaSize: areaSize.trim(),
+          ...housePropertyFieldsToPayload(propertyFields),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -539,26 +552,7 @@ export function HouseFormPage() {
               : undefined
           }
         />
-        <label className="field">
-          <span>家賃</span>
-          <input
-            value={rent}
-            onChange={(e) => setRent(e.target.value)}
-            maxLength={50}
-            placeholder="例: 8.5万円"
-          />
-        </label>
-        <label className="field">
-          <span>間取り</span>
-          <select value={areaSize} onChange={(e) => setAreaSize(e.target.value)}>
-            <option value="">選択してください（任意）</option>
-            {AREA_SIZE_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </label>
+        <HousePropertyFormFields fields={propertyFields} onChange={onPropertyFieldChange} />
         <HouseFormPhotoSection
           existingPhotos={activeExistingPhotos}
           pendingPhotos={pendingPhotos}

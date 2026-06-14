@@ -14,6 +14,10 @@ import {
 import { deleteHousePhotoByUrl, getDb, messageForHouseFormSaveError, uploadHousePhoto } from '../firebase';
 import { MAX_HOUSE_PHOTOS } from './photoFileSelection';
 import type { HousePhoto } from '../types';
+import {
+  type HousePropertyFields,
+  housePropertyFieldsToPayload,
+} from './housePropertyFields';
 
 export { MAX_HOUSE_PHOTOS };
 
@@ -23,9 +27,7 @@ export type HouseTextFields = {
   prefecture: string;
   city: string;
   town: string;
-  rent: string;
-  areaSize: string;
-};
+} & HousePropertyFields;
 
 export type SaveProgressStep = 'upload' | 'photos' | 'house';
 
@@ -129,6 +131,7 @@ export function buildHouseUpdatePayload(
   textFields: HouseTextFields,
   savedPhotos: HousePhoto[]
 ): Record<string, unknown> {
+  const props = housePropertyFieldsToPayload(textFields);
   return {
     ownerId,
     title: textFields.title.trim(),
@@ -136,8 +139,7 @@ export function buildHouseUpdatePayload(
     prefecture: textFields.prefecture.trim(),
     city: textFields.city.trim(),
     town: textFields.town.trim(),
-    rent: textFields.rent.trim(),
-    areaSize: textFields.areaSize.trim(),
+    ...props,
     photoUrl: deleteField(),
     photoUrls: deleteField(),
     ...(savedPhotos.length > 0

@@ -361,6 +361,38 @@ code {
   text-align: right;
 }
 
+.house-property-table {
+  margin: 0 0 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fafbff;
+}
+
+.house-property-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+.house-property-row:last-child {
+  border-bottom: none;
+}
+
+.house-property-row dt {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.house-property-row dd {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .house-hero {
   margin: 1rem 0 1.25rem;
   border-radius: var(--radius);
