@@ -184,8 +184,10 @@ export function HouseDetailPage() {
         <span aria-hidden="true"> / </span>
         <span>{house.title || '物件詳細'}</span>
       </p>
-      <h1>{house.title || '（無題）'}</h1>
-      <p className="muted">掲載: {formatDate(house.createdAt)}</p>
+      <div className="house-detail-head">
+        <h1>{house.title || '（無題）'}</h1>
+        <p className="muted house-detail-date">掲載: {formatDate(house.createdAt)}</p>
+      </div>
       {houseLocationLine(house) ||
       house.rent ||
       (house.areaSize && isKnownLayoutAreaSize(house.areaSize)) ? (
@@ -211,10 +213,8 @@ export function HouseDetailPage() {
       </div>
 
       <section className="stack-lg" aria-labelledby="inquiries-heading">
-        <h2 id="inquiries-heading">問い合わせ</h2>
-
         <form className="stack" onSubmit={onSubmitInquiry}>
-          <h3>問い合わせを送る</h3>
+          <h2 id="inquiries-heading">問い合わせを送る</h2>
           <label className="field">
             <span>表示名（任意）</span>
             <input
