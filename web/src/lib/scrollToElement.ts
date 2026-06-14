@@ -1,9 +1,10 @@
-export function scrollToElementId(id: string): boolean {
+export function scrollToElementId(id: string, focusId?: string): boolean {
   const el = document.getElementById(id);
   if (!el) return false;
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-    el.focus({ preventScroll: true });
+  const focusTarget = focusId ? document.getElementById(focusId) : el;
+  if (focusTarget instanceof HTMLTextAreaElement || focusTarget instanceof HTMLInputElement) {
+    focusTarget.focus({ preventScroll: true });
   }
   return true;
 }

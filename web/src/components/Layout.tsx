@@ -3,6 +3,8 @@ import { Link, Outlet, useMatch } from 'react-router-dom';
 import { usePageHeaderEndActionValue, usePageHeaderValue } from '../context/PageTitleContext';
 import { scrollToElementId } from '../lib/scrollToElement';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
+import { HouseDetailBackButton } from './HouseDetailBackButton';
+import { ScrollToTopOnNavigate } from './ScrollToTopOnNavigate';
 
 function HeaderEnd() {
   const crumbs = usePageHeaderValue();
@@ -14,7 +16,7 @@ function HeaderEnd() {
         <button
           type="button"
           className="btn primary app-header-inquiry-btn"
-          onClick={() => scrollToElementId(endAction.targetId)}
+          onClick={() => scrollToElementId(endAction.targetId, endAction.focusId)}
         >
           {endAction.label}
         </button>
@@ -52,14 +54,11 @@ export function Layout() {
 
   return (
     <div className="app-shell">
+      <ScrollToTopOnNavigate />
       <header className="app-header">
         <div className="app-header-inner">
           <div className="app-header-start">
-            {isHouseDetail ? (
-              <Link to="/" className="app-header-back">
-                ← 戻る
-              </Link>
-            ) : null}
+            {isHouseDetail ? <HouseDetailBackButton /> : null}
           </div>
           <Link to="/" className="brand app-header-brand">
             大家ダイレクト

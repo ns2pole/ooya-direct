@@ -18,11 +18,14 @@ function HouseDetailHeaderStub() {
 
 function HouseDetailInquiryStub() {
   usePageHeader(houseDetailHeaderCrumbs({ title: 'テスト物件1' }));
-  usePageHeaderEndAction({ label: '問い合わせ', targetId: 'inquiry-message' });
+  usePageHeaderEndAction({ label: '問い合わせ', targetId: 'inquiry-message-label', focusId: 'inquiry-message' });
   return (
     <>
       <p>物件詳細本文</p>
-      <textarea id="inquiry-message" aria-label="メッセージ" />
+      <label htmlFor="inquiry-message">
+        <span id="inquiry-message-label">メッセージ</span>
+        <textarea id="inquiry-message" aria-label="メッセージ" />
+      </label>
     </>
   );
 }
@@ -51,7 +54,7 @@ describe('Layout header breadcrumbs', () => {
     );
 
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
-    expect(screen.getByRole('link', { name: '← 戻る' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('button', { name: '← 戻る' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: '現在のページ' })).toBeNull();
     expect(screen.getByText('物件詳細本文')).toBeInTheDocument();
   });
@@ -70,6 +73,7 @@ describe('Layout header breadcrumbs', () => {
     );
 
     expect(screen.queryByRole('link', { name: '← 戻る' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '← 戻る' })).toBeNull();
     expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
     expect(screen.getByText('物件一覧')).toBeInTheDocument();
     expect(screen.getByText('一覧本文')).toBeInTheDocument();
@@ -91,7 +95,7 @@ describe('Layout header breadcrumbs', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '問い合わせ' }));
-    expect(scrollSpy).toHaveBeenCalledWith('inquiry-message');
+    expect(scrollSpy).toHaveBeenCalledWith('inquiry-message-label', 'inquiry-message');
   });
 
   it('ブランド 大家ダイレクト は常に / へのリンク', () => {

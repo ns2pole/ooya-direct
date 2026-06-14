@@ -8,6 +8,7 @@ export type PageHeaderCrumb = {
 export type PageHeaderEndAction = {
   label: string;
   targetId: string;
+  focusId?: string;
 };
 
 type PageTitleContextValue = {

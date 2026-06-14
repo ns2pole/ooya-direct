@@ -89,11 +89,16 @@ code {
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--primary);
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .app-header-back:hover {
@@ -859,9 +864,12 @@ code {
   white-space: nowrap;
 }
 
+#inquiry-message-label {
+  scroll-margin-top: 4.5rem;
+}
+
 .inquiry-message {
   min-height: 112px;
-  scroll-margin-top: 4.5rem;
 }
 
 .btn {
