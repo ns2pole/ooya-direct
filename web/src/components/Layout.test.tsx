@@ -25,7 +25,7 @@ describe('Layout header breadcrumbs', () => {
     cleanup();
   });
 
-  it('物件詳細では 物件一覧 が / へのリンク、物件名はリンクにならない', () => {
+  it('物件詳細では物件名のみ表示しリンクにならない', () => {
     render(
       <MemoryRouter initialEntries={['/houses/abc']}>
         <PageTitleProvider>
@@ -38,10 +38,9 @@ describe('Layout header breadcrumbs', () => {
       </MemoryRouter>
     );
 
-    const listLink = screen.getByRole('link', { name: '物件一覧' });
-    expect(listLink).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('link', { name: '物件一覧' })).toBeNull();
     expect(screen.getByRole('navigation', { name: '現在のページ' })).toHaveTextContent(
-      '物件一覧 / テスト物件1'
+      'テスト物件1'
     );
     expect(screen.queryByRole('link', { name: 'テスト物件1' })).toBeNull();
     expect(screen.getByText('物件詳細本文')).toBeInTheDocument();
@@ -65,7 +64,7 @@ describe('Layout header breadcrumbs', () => {
     expect(screen.getByText('一覧本文')).toBeInTheDocument();
   });
 
-  it('ブランド 物件ダイレクト は常に / へのリンク', () => {
+  it('ブランド 大家ダイレクト は常に / へのリンク', () => {
     render(
       <MemoryRouter initialEntries={['/houses/abc']}>
         <PageTitleProvider>
@@ -78,6 +77,6 @@ describe('Layout header breadcrumbs', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: '物件ダイレクト' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: '大家ダイレクト' })).toHaveAttribute('href', '/');
   });
 });

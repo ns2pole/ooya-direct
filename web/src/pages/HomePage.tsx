@@ -3,11 +3,9 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { getDb, isFirebaseConfigured } from '../firebase';
 import type { House } from '../types';
 import { mapHouse } from '../lib/mapHouse';
-import { usePageTitle } from '../context/PageTitleContext';
 import { HouseListCarousel } from '../components/HouseListCarousel';
 
 export function HomePage() {
-  usePageTitle('物件一覧');
   const [houses, setHouses] = useState<House[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

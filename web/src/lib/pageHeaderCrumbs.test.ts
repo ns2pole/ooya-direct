@@ -2,38 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { houseDetailHeaderCrumbs, houseFormHeaderCrumbs } from './pageHeaderCrumbs';
 
 describe('houseDetailHeaderCrumbs', () => {
-  it('読み込み中は 物件一覧 / 物件詳細 を返す', () => {
-    expect(houseDetailHeaderCrumbs(undefined)).toEqual([
-      { label: '物件一覧', to: '/' },
-      { label: '物件詳細' },
-    ]);
+  it('読み込み中は 物件詳細 を返す', () => {
+    expect(houseDetailHeaderCrumbs(undefined)).toEqual([{ label: '物件詳細' }]);
   });
 
-  it('物件がない場合は 物件一覧 / 物件が見つかりません を返す', () => {
-    expect(houseDetailHeaderCrumbs(null)).toEqual([
-      { label: '物件一覧', to: '/' },
-      { label: '物件が見つかりません' },
-    ]);
+  it('物件がない場合は 物件が見つかりません を返す', () => {
+    expect(houseDetailHeaderCrumbs(null)).toEqual([{ label: '物件が見つかりません' }]);
   });
 
-  it('物件タイトルを末尾に表示する', () => {
+  it('物件タイトルのみを返す', () => {
     expect(houseDetailHeaderCrumbs({ title: 'テスト物件1' })).toEqual([
-      { label: '物件一覧', to: '/' },
       { label: 'テスト物件1' },
     ]);
   });
 
   it('タイトルが空のときは（無題）を使う', () => {
-    expect(houseDetailHeaderCrumbs({ title: '' })).toEqual([
-      { label: '物件一覧', to: '/' },
-      { label: '（無題）' },
-    ]);
+    expect(houseDetailHeaderCrumbs({ title: '' })).toEqual([{ label: '（無題）' }]);
   });
 
-  it('物件一覧にはリンク先 / がある', () => {
+  it('物件名にはリンク先がない', () => {
     const crumbs = houseDetailHeaderCrumbs({ title: 'テスト物件1' });
-    expect(crumbs[0].to).toBe('/');
-    expect(crumbs[1].to).toBeUndefined();
+    expect(crumbs[0].to).toBeUndefined();
   });
 });
 

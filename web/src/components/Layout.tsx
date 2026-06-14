@@ -11,7 +11,7 @@ export function Layout() {
       <header className="app-header">
         <div className="app-header-inner">
           <Link to="/" className="brand">
-            物件ダイレクト
+            大家ダイレクト
           </Link>
           {crumbs.length > 0 ? (
             <nav className="app-header-page" aria-label="現在のページ">

@@ -4,12 +4,12 @@ type HouseDetailHeaderInput = { title: string } | null | undefined;
 
 export function houseDetailHeaderCrumbs(house: HouseDetailHeaderInput): PageHeaderCrumb[] {
   if (house === undefined) {
-    return [{ label: '物件一覧', to: '/' }, { label: '物件詳細' }];
+    return [{ label: '物件詳細' }];
   }
   if (house === null) {
-    return [{ label: '物件一覧', to: '/' }, { label: '物件が見つかりません' }];
+    return [{ label: '物件が見つかりません' }];
   }
-  return [{ label: '物件一覧', to: '/' }, { label: house.title || '（無題）' }];
+  return [{ label: house.title || '（無題）' }];
 }
 
 export function houseFormHeaderCrumbs(isNew: boolean): PageHeaderCrumb[] {
