@@ -25,7 +25,9 @@ import {
   messageForHouseFormSaveError,
 } from '../firebase';
 import {
+  coverPhotoField,
   loadHousePhotosForDisplay,
+  legacyPhotoUrlsFromHouse,
   MAX_HOUSE_PHOTOS,
   saveHousePhotos,
 } from '../lib/housePhotos';
@@ -56,7 +58,12 @@ export function HouseFormPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const pendingPhotosRef = useRef(pendingPhotos);
+  const existingPhotosRef = useRef(existingPhotos);
+  const removedPhotoIdsRef = useRef(removedPhotoIds);
+  const loadedHouseIdRef = useRef<string | null>(null);
   pendingPhotosRef.current = pendingPhotos;
+  existingPhotosRef.current = existingPhotos;
+  removedPhotoIdsRef.current = removedPhotoIds;
 
   const [prefsData, setPrefsData] = useState<SinglePrefecture[] | null>(null);
   const [prefList, setPrefList] = useState<string[]>([]);
@@ -144,6 +151,19 @@ export function HouseFormPage() {
           return;
         }
         const photos = await loadHousePhotosForDisplay(houseId, data);
+        const legacyUrls = legacyPhotoUrlsFromHouse(data);
+        if (
+          photos.length > 0 &&
+          (legacyUrls.length > 0 || typeof data.coverPhotoUrl !== 'string')
+        ) {
+          await updateDoc(doc(getDb(), 'houses', houseId), {
+            ...coverPhotoField(photos),
+            ...(legacyUrls.length > 0
+              ? { photoUrl: deleteField(), photoUrls: deleteField() }
+              : {}),
+            updatedAt: serverTimestamp(),
+          });
+        }
         if (!cancelled) {
           setTitle(String(data.title ?? ''));
           setDescription(String(data.description ?? ''));
@@ -153,9 +173,15 @@ export function HouseFormPage() {
           setRent(String(data.rent ?? ''));
           const rawArea = String(data.areaSize ?? '').trim();
           setAreaSize(AREA_SIZE_OPTIONS.includes(rawArea) ? rawArea : '');
+          if (loadedHouseIdRef.current !== houseId) {
+            pendingPhotosRef.current.forEach(({ previewUrl }) =>
+              URL.revokeObjectURL(previewUrl)
+            );
+            setPendingPhotos([]);
+            setRemovedPhotoIds(new Set());
+            loadedHouseIdRef.current = houseId;
+          }
           setExistingPhotos(photos);
-          setRemovedPhotoIds(new Set());
-          setPendingPhotos([]);
           setLoadError(null);
           setFormError(null);
         }
@@ -171,7 +197,7 @@ export function HouseFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [houseId, isNew, user]);
+  }, [houseId, isNew, user?.uid]);
 
   useEffect(() => {
     return () => {
@@ -248,8 +274,20 @@ export function HouseFormPage() {
     clearPendingPhotos();
   }
 
-  function houseTextFields(options?: { stripLegacyPhotos?: boolean }): Record<string, unknown> {
-    const fields: Record<string, unknown> = {
+  function houseUpdatePayload(savedPhotos: HousePhoto[]): Record<string, unknown> {
+    return {
+      ...houseTextFields(),
+      photoUrl: deleteField(),
+      photoUrls: deleteField(),
+      ...(savedPhotos.length > 0
+        ? { coverPhotoUrl: savedPhotos[0].url }
+        : { coverPhotoUrl: deleteField() }),
+      updatedAt: serverTimestamp(),
+    };
+  }
+
+  function houseTextFields(): Record<string, unknown> {
+    return {
       title: title.trim(),
       description: description.trim(),
       prefecture: prefecture.trim(),
@@ -257,13 +295,7 @@ export function HouseFormPage() {
       town: town.trim(),
       rent: rent.trim(),
       areaSize: areaSize.trim(),
-      updatedAt: serverTimestamp(),
     };
-    if (options?.stripLegacyPhotos) {
-      fields.photoUrl = deleteField();
-      fields.photoUrls = deleteField();
-    }
-    return fields;
   }
 
   function saveSuccessMessage(photoCount: number): string {
@@ -279,40 +311,43 @@ export function HouseFormPage() {
     setSaving(true);
     setFormError(null);
     try {
-      const photoChanged = removedPhotoIds.size > 0 || pendingPhotos.length > 0;
+      const pendingFiles = pendingPhotosRef.current.map((p) => p.file);
+      const removedIds = removedPhotoIdsRef.current;
+      const photoChanged = removedIds.size > 0 || pendingFiles.length > 0;
 
       if (isNew) {
         const ref = await addDoc(collection(getDb(), 'houses'), {
           ownerId: user.uid,
           ...houseTextFields(),
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
-        let savedPhotoCount = 0;
-        if (pendingPhotos.length > 0) {
-          const saved = await saveHousePhotos(ref.id, {
+        let saved: HousePhoto[] = [];
+        if (pendingFiles.length > 0) {
+          saved = await saveHousePhotos(ref.id, {
             existing: [],
             removedIds: new Set(),
-            pendingFiles: pendingPhotos.map((p) => p.file),
+            pendingFiles,
           });
-          savedPhotoCount = saved.length;
+          await updateDoc(doc(getDb(), 'houses', ref.id), houseUpdatePayload(saved));
         }
         showToast(
-          savedPhotoCount > 0
-            ? `物件を登録しました（写真 ${savedPhotoCount} 枚）。`
+          saved.length > 0
+            ? `物件を登録しました（写真 ${saved.length} 枚）。`
             : '物件を登録しました。',
           'success'
         );
         navigate(`/landlord/houses/${ref.id}/edit`);
       } else if (houseId) {
-        await updateDoc(doc(getDb(), 'houses', houseId), houseTextFields({ stripLegacyPhotos: true }));
-        let saved = activeExistingPhotos;
+        let saved = existingPhotosRef.current.filter((p) => !removedIds.has(p.id));
         if (photoChanged) {
           saved = await saveHousePhotos(houseId, {
-            existing: existingPhotos,
-            removedIds: removedPhotoIds,
-            pendingFiles: pendingPhotos.map((p) => p.file),
+            existing: existingPhotosRef.current,
+            removedIds,
+            pendingFiles,
           });
         }
+        await updateDoc(doc(getDb(), 'houses', houseId), houseUpdatePayload(saved));
         applySavedPhotos(saved);
         showToast(saveSuccessMessage(saved.length), 'success');
       }

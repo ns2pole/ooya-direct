@@ -2,13 +2,11 @@ import {
   addDoc,
   collection,
   deleteDoc,
-  deleteField,
   doc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
-  updateDoc,
   type DocumentData,
 } from 'firebase/firestore';
 import { deleteHousePhotoByUrl, getDb, uploadHousePhoto } from '../firebase';
@@ -68,7 +66,15 @@ export async function listHousePhotos(houseId: string): Promise<HousePhoto[]> {
   return list;
 }
 
-/** 旧形式の画像 URL を photos サブコレクションへ移行し、legacy フィールドを削除 */
+function newPhotoDoc(url: string, order: number): DocumentData {
+  return {
+    url,
+    order: Math.floor(order),
+    createdAt: serverTimestamp(),
+  };
+}
+
+/** 旧形式の画像 URL を photos サブコレクションへ移行（legacy フィールド削除は呼び出し側） */
 export async function migrateLegacyPhotos(
   houseId: string,
   houseData: Record<string, unknown>
@@ -80,37 +86,10 @@ export async function migrateLegacyPhotos(
   if (legacyUrls.length === 0) return [];
 
   for (let i = 0; i < legacyUrls.length; i++) {
-    await addDoc(photosCol(houseId), {
-      url: legacyUrls[i],
-      order: i,
-      label: null,
-      createdAt: serverTimestamp(),
-    });
+    await addDoc(photosCol(houseId), newPhotoDoc(legacyUrls[i], i));
   }
 
-  await syncHouseCoverPhoto(houseId, legacyUrls[0] ?? null, { removeLegacyFields: true });
   return listHousePhotos(houseId);
-}
-
-/** 物件ドキュメントの coverPhotoUrl を先頭写真と同期（legacy フィールドは任意で削除） */
-export async function syncHouseCoverPhoto(
-  houseId: string,
-  coverUrl: string | null,
-  options?: { removeLegacyFields?: boolean }
-): Promise<void> {
-  const payload: DocumentData = {
-    updatedAt: serverTimestamp(),
-  };
-  if (coverUrl) {
-    payload.coverPhotoUrl = coverUrl;
-  } else {
-    payload.coverPhotoUrl = deleteField();
-  }
-  if (options?.removeLegacyFields) {
-    payload.photoUrl = deleteField();
-    payload.photoUrls = deleteField();
-  }
-  await updateDoc(doc(getDb(), 'houses', houseId), payload);
 }
 
 export async function loadHousePhotosForDisplay(
@@ -128,7 +107,7 @@ export type SaveHousePhotosInput = {
   pendingFiles: File[];
 };
 
-/** サブコレクションへの追加・削除を反映し、最新一覧を返す */
+/** サブコレクションへの追加・削除を反映し、最新一覧を返す（coverPhotoUrl は呼び出し側で更新） */
 export async function saveHousePhotos(
   houseId: string,
   input: SaveHousePhotosInput
@@ -142,23 +121,15 @@ export async function saveHousePhotos(
   }
 
   const kept = existing.filter((p) => !removedIds.has(p.id));
-  let nextOrder =
-    kept.length > 0 ? Math.max(...kept.map((p) => p.order)) + 1 : 0;
+  let nextOrder = kept.length > 0 ? Math.max(...kept.map((p) => p.order)) + 1 : 0;
 
   for (const file of pendingFiles) {
     const url = await uploadHousePhoto(houseId, file);
-    await addDoc(photosCol(houseId), {
-      url,
-      order: nextOrder,
-      label: null,
-      createdAt: serverTimestamp(),
-    });
+    await addDoc(photosCol(houseId), newPhotoDoc(url, nextOrder));
     nextOrder += 1;
   }
 
-  const saved = await listHousePhotos(houseId);
-  await syncHouseCoverPhoto(houseId, saved[0]?.url ?? null, { removeLegacyFields: true });
-  return saved;
+  return listHousePhotos(houseId);
 }
 
 /** 物件削除時に photos サブコレクションと Storage を片付け */
@@ -174,4 +145,9 @@ export async function deleteAllHousePhotos(houseId: string): Promise<void> {
 
 export function photoUrlsFromList(photos: HousePhoto[]): string[] {
   return photos.map((p) => p.url);
+}
+
+export function coverPhotoField(urls: HousePhoto[]): Record<string, unknown> {
+  const cover = urls[0]?.url;
+  return cover ? { coverPhotoUrl: cover } : {};
 }

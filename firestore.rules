@@ -11,20 +11,21 @@ service cloud.firestore {
         && houseDoc(houseId).data.ownerId == request.auth.uid;
     }
 
+    function validStorageUrl(field) {
+      return field is string
+        && field.size() > 0
+        && field.size() < 8192
+        && field.matches('https://.*');
+    }
+
     function validCoverPhotoUrl() {
       return !('coverPhotoUrl' in request.resource.data)
-        || (request.resource.data.coverPhotoUrl is string
-          && request.resource.data.coverPhotoUrl.size() > 0
-          && request.resource.data.coverPhotoUrl.size() < 2048
-          && request.resource.data.coverPhotoUrl.matches('https://.*'));
+        || validStorageUrl(request.resource.data.coverPhotoUrl);
     }
 
     function validLegacyPhotoUrl() {
       return !('photoUrl' in request.resource.data)
-        || (request.resource.data.photoUrl is string
-          && request.resource.data.photoUrl.size() > 0
-          && request.resource.data.photoUrl.size() < 2048
-          && request.resource.data.photoUrl.matches('https://.*'));
+        || validStorageUrl(request.resource.data.photoUrl);
     }
 
     function validLegacyPhotoUrls() {
@@ -57,19 +58,12 @@ service cloud.firestore {
 
     function validPhotoDoc() {
       return request.resource.data.keys().hasOnly([
-          'url', 'order', 'label', 'createdAt'
+          'url', 'order', 'createdAt'
         ])
-        && request.resource.data.url is string
-        && request.resource.data.url.size() > 0
-        && request.resource.data.url.size() < 2048
-        && request.resource.data.url.matches('https://.*')
-        && request.resource.data.order is int
+        && validStorageUrl(request.resource.data.url)
+        && request.resource.data.order is number
         && request.resource.data.order >= 0
-        && request.resource.data.order <= 19
-        && (!('label' in request.resource.data)
-          || request.resource.data.label == null
-          || (request.resource.data.label is string
-            && request.resource.data.label.size() <= 50));
+        && request.resource.data.order <= 19;
     }
 
     match /houses/{houseId} {
