@@ -515,7 +515,7 @@ export function HouseFormPage() {
             住所候補の取得に失敗しました: {addressLoadError}（手入力のまま保存できます）
           </p>
         ) : null}
-        <div className="field-row">
+        <div className="field-row field-row--3">
           <AutocompleteSelect
             label="都道府県"
             value={prefecture}
@@ -539,21 +539,21 @@ export function HouseFormPage() {
             disabled={!prefecture}
             placeholder={prefecture ? '例: 新宿区' : '先に都道府県'}
           />
+          <AutocompleteSelect
+            label="町名（大字・丁目など）"
+            value={town}
+            onChange={setTown}
+            options={townList}
+            disabled={!prefecture || !city}
+            loading={loadingTowns}
+            placeholder={city ? '候補から選ぶか入力' : '先に市区町村'}
+          />
         </div>
-        <AutocompleteSelect
-          label="町名（大字・丁目など）"
-          value={town}
-          onChange={setTown}
-          options={townList}
-          disabled={!prefecture || !city}
-          loading={loadingTowns}
-          placeholder={city ? '候補から選ぶか入力' : '先に市区町村を選んでください'}
-          hint={
-            prefecture && city && townList.length === 0 && !loadingTowns
-              ? 'この市区町村には町字データがありません。直接入力してください。'
-              : undefined
-          }
-        />
+        {prefecture && city && townList.length === 0 && !loadingTowns ? (
+          <p className="muted small" style={{ margin: 0 }}>
+            この市区町村には町字データがありません。町名は直接入力してください。
+          </p>
+        ) : null}
         <HousePropertyFormFields fields={propertyFields} onChange={onPropertyFieldChange} />
         <HouseFormPhotoSection
           existingPhotos={activeExistingPhotos}

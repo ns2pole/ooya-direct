@@ -721,8 +721,12 @@ code {
   gap: 0.65rem 0.75rem;
 }
 
+.field-row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 420px) {
-  .field-row {
+  .field-row:not(.field-row--3) {
     grid-template-columns: 1fr;
   }
 }
