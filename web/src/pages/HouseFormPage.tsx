@@ -1,5 +1,5 @@
 import type { SinglePrefecture } from '@geolonia/japanese-addresses-v2';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDoc,
   collection,
@@ -29,6 +29,7 @@ import {
   MAX_HOUSE_PHOTOS,
   saveHousePhotos,
 } from '../lib/housePhotos';
+import { imageFileHint, isAllowedImageFile } from '../lib/imageFile';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import type { HousePhoto } from '../types';
@@ -52,7 +53,10 @@ export function HouseFormPage() {
   const [pendingPhotos, setPendingPhotos] = useState<{ file: File; previewUrl: string }[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const pendingPhotosRef = useRef(pendingPhotos);
+  pendingPhotosRef.current = pendingPhotos;
 
   const [prefsData, setPrefsData] = useState<SinglePrefecture[] | null>(null);
   const [prefList, setPrefList] = useState<string[]>([]);
@@ -131,12 +135,12 @@ export function HouseFormPage() {
         const ref = doc(getDb(), 'houses', houseId);
         const snap = await getDoc(ref);
         if (!snap.exists) {
-          if (!cancelled) setError('物件が見つかりません。');
+          if (!cancelled) setLoadError('物件が見つかりません。');
           return;
         }
         const data = snap.data() as Record<string, unknown>;
         if (String(data.ownerId) !== user.uid) {
-          if (!cancelled) setError('この物件を編集する権限がありません。');
+          if (!cancelled) setLoadError('この物件を編集する権限がありません。');
           return;
         }
         const photos = await loadHousePhotosForDisplay(houseId, data);
@@ -152,11 +156,12 @@ export function HouseFormPage() {
           setExistingPhotos(photos);
           setRemovedPhotoIds(new Set());
           setPendingPhotos([]);
-          setError(null);
+          setLoadError(null);
+          setFormError(null);
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : '読み込みに失敗しました。');
+          setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました。');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -170,12 +175,13 @@ export function HouseFormPage() {
 
   useEffect(() => {
     return () => {
-      pendingPhotos.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      pendingPhotosRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
     };
-  }, [pendingPhotos]);
+  }, []);
 
   const activeExistingPhotos = existingPhotos.filter((p) => !removedPhotoIds.has(p.id));
   const totalPhotoCount = activeExistingPhotos.length + pendingPhotos.length;
+  const pendingPhotoCount = pendingPhotos.length;
 
   function onPhotoFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -184,25 +190,36 @@ export function HouseFormPage() {
 
     const additions: { file: File; previewUrl: string }[] = [];
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) {
-        setError('画像ファイル（JPEG / PNG / GIF / WebP）を選んでください。');
+      if (!isAllowedImageFile(file)) {
+        const msg = `画像ファイル（${imageFileHint()}）を選んでください。`;
+        setFormError(msg);
+        showToast(msg, 'error');
         return;
       }
       if (file.size > MAX_IMAGE_BYTES) {
-        setError('画像は 5MB 以下にしてください。');
+        const msg = '画像は 5MB 以下にしてください。';
+        setFormError(msg);
+        showToast(msg, 'error');
         return;
       }
       additions.push({ file, previewUrl: URL.createObjectURL(file) });
     }
 
-    if (totalPhotoCount + additions.length > MAX_HOUSE_PHOTOS) {
+    const nextTotal = activeExistingPhotos.length + pendingPhotos.length + additions.length;
+    if (nextTotal > MAX_HOUSE_PHOTOS) {
       additions.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
-      setError(`写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`);
+      const msg = `写真は最大 ${MAX_HOUSE_PHOTOS} 枚までです。`;
+      setFormError(msg);
+      showToast(msg, 'error');
       return;
     }
 
-    setError(null);
+    setFormError(null);
     setPendingPhotos((prev) => [...prev, ...additions]);
+    showToast(
+      `${additions.length}枚追加しました。下の「保存」ボタンを押すと登録されます。`,
+      'success'
+    );
   }
 
   function removeExistingPhoto(photoId: string) {
@@ -260,7 +277,7 @@ export function HouseFormPage() {
     e.preventDefault();
     if (!user || !isFirebaseConfigured) return;
     setSaving(true);
-    setError(null);
+    setFormError(null);
     try {
       const photoChanged = removedPhotoIds.size > 0 || pendingPhotos.length > 0;
 
@@ -301,7 +318,7 @@ export function HouseFormPage() {
       }
     } catch (err) {
       const msg = messageForHouseFormSaveError(err);
-      setError(msg);
+      setFormError(msg);
       showToast(msg, 'error');
     } finally {
       setSaving(false);
@@ -336,10 +353,10 @@ export function HouseFormPage() {
     );
   }
 
-  if (error && !isNew && !loading) {
+  if (loadError && !isNew && !loading) {
     return (
       <section className="panel stack">
-        <p className="text-error">{error}</p>
+        <p className="text-error">{loadError}</p>
         <Link to="/landlord">マイ物件へ</Link>
       </section>
     );
@@ -445,9 +462,13 @@ export function HouseFormPage() {
             disabled={totalPhotoCount >= MAX_HOUSE_PHOTOS}
           />
           <p className="muted small" style={{ margin: 0 }}>
-            1枚ごとに Firestore の photos コレクションへ保存されます。詳細ページで ‹ ›
-            ボタンで切り替えられます。先頭の写真が一覧サムネイルになります。
-            {totalPhotoCount > 0 ? ` 現在 ${totalPhotoCount} 枚選択中。` : ''}
+            ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。
+            <strong> 追加・削除は「保存」ボタンを押すまで確定しません。</strong>
+            保存後、詳細ページで ‹ › ボタンで切り替えられます。
+            {totalPhotoCount > 0
+              ? ` 登録済み ${activeExistingPhotos.length} 枚` +
+                (pendingPhotoCount > 0 ? ` + 追加予定 ${pendingPhotoCount} 枚` : '')
+              : ''}
           </p>
           {totalPhotoCount > 0 ? (
             <ul className="house-form-photos">
@@ -481,7 +502,12 @@ export function HouseFormPage() {
             </ul>
           ) : null}
         </div>
-        {error ? <p className="text-error">{error}</p> : null}
+        {formError ? <p className="text-error">{formError}</p> : null}
+        {pendingPhotoCount > 0 ? (
+          <p className="text-success small" style={{ margin: 0 }}>
+            追加予定 {pendingPhotoCount} 枚があります。「保存」を押してください。
+          </p>
+        ) : null}
         <div className="row">
           <button type="submit" className="btn primary" disabled={saving}>
             {saving ? '保存中…' : '保存'}
