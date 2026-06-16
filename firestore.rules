@@ -80,6 +80,15 @@ service cloud.firestore {
         && request.resource.data.order <= 19;
     }
 
+    match /landlordProfiles/{ownerId} {
+      allow read: if request.auth != null && request.auth.uid == ownerId;
+      allow create, update, delete: if false;
+    }
+
+    match /lineLinkCodes/{code} {
+      allow read, write: if false;
+    }
+
     match /houses/{houseId} {
       allow read: if true;
 

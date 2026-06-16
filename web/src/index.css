@@ -982,3 +982,25 @@ code {
   font-size: 0.95rem;
   line-height: 1.5;
 }
+
+.line-link-panel {
+  padding: 1rem;
+  border: 1px solid #e2e6ef;
+  border-radius: 8px;
+  background: #fafbfe;
+}
+
+.line-link-heading {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.line-link-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.line-link-code {
+  font-size: 1.25rem;
+  letter-spacing: 0.15em;
+}

@@ -1,5 +1,9 @@
 import * as admin from "firebase-admin";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
+import { createLinkCode, unlinkLineProfile } from "./line/link";
+import { handleLineWebhook } from "./line/webhook";
+import { onInquiryCreated } from "./inquiryNotify";
 
 admin.initializeApp();
 
@@ -7,6 +11,9 @@ const REGION = "asia-northeast1";
 const MAX_MESSAGE = 2000;
 /** スパム緩和: 物件あたりの問い合わせ上限（この件数に達すると新規投稿不可） */
 const MAX_INQUIRIES_PER_HOUSE = 100;
+
+const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
+const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
 
 type SubmitInquiryInput = {
   houseId?: unknown;
@@ -60,3 +67,54 @@ export const submitInquiry = onCall(
     return { inquiryId: docRef.id };
   }
 );
+
+export const startLineLink = onCall(
+  { region: REGION, cors: true },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const db = admin.firestore();
+    const code = await createLinkCode(db, request.auth.uid);
+    return { code, expiresInSeconds: 600 };
+  }
+);
+
+export const unlinkLine = onCall(
+  { region: REGION, cors: true },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const db = admin.firestore();
+    await unlinkLineProfile(db, request.auth.uid);
+    return { ok: true };
+  }
+);
+
+export const lineWebhook = onRequest(
+  {
+    region: REGION,
+    invoker: "public",
+    secrets: [lineChannelAccessToken, lineChannelSecret],
+  },
+  async (req, res) => {
+    try {
+      await handleLineWebhook(
+        req,
+        res,
+        lineChannelAccessToken.value(),
+        lineChannelSecret.value()
+      );
+    } catch (err) {
+      console.error("lineWebhook error:", err);
+      if (!res.headersSent) {
+        res.status(500).send("Internal Server Error");
+      }
+    }
+  }
+);
+
+export { onInquiryCreated };

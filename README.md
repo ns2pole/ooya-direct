@@ -7,7 +7,7 @@
 ## 構成
 
 - `web/` … Vite + React（**GitHub Pages で配信**）
-- `functions/` … Cloud Functions（`submitInquiry`）
+- `functions/` … Cloud Functions（`submitInquiry`、LINE 通知・連携）
 - `firestore.rules` / `firestore.indexes.json` … Firestore
 
 ## 事前準備（Firebase コンソール）
@@ -51,18 +51,65 @@ npm run dev
    - `VITE_FIREBASE_APP_ID`
 
 5. `main` に push すると [`.github/workflows/github-pages.yml`](.github/workflows/github-pages.yml) が走り、`https://<ユーザー>.github.io/<リポジトリ名>/` に公開されます。  
+   LINE 友だち追加 URL（`https://lin.ee/uvetvHd`）はワークフローに直書き済みです。  
    **ベースパス**はワークフロー内で `VITE_BASE=/<リポジトリ名>/` に自動設定しています。
 
 カスタムドメインにする場合は、Vite の `base` と DNS を合わせて調整し、Firebase の承認済みドメインにもそのドメインを追加してください。
 
-## Cloud Functions（問い合わせ）
+## Cloud Functions（問い合わせ・LINE 通知）
 
 リージョンは **asia-northeast1** です。
 
+| 関数 | 種別 | 説明 |
+|------|------|------|
+| `submitInquiry` | Callable | 問い合わせ保存 |
+| `startLineLink` | Callable | LINE 連携コード発行（要ログイン） |
+| `unlinkLine` | Callable | LINE 連携解除（要ログイン） |
+| `lineWebhook` | HTTP | LINE からの Webhook（連携コード受付） |
+| `onInquiryCreated` | Firestore トリガー | 問い合わせ作成時に LINE Push 通知 |
+
 ```bash
 cd functions && npm install && npm run build
-cd .. && firebase deploy --only functions
+cd .. && firebase deploy --only functions,firestore:rules
 ```
+
+## LINE 通知（あなたがやること）
+
+友だち追加 URL・サイト URL・フロント設定はコード側に済んでいます（`https://lin.ee/uvetvHd`）。  
+**残りは次の 3 つだけ**です。
+
+### 1. トークンを Firebase に登録（2コマンド）
+
+LINE Developers で控えた値を貼り付け:
+
+```bash
+firebase functions:secrets:set LINE_CHANNEL_ACCESS_TOKEN
+firebase functions:secrets:set LINE_CHANNEL_SECRET
+```
+
+初回で Secret Manager のエラーが出たら、表示されたリンクから API を有効化して数分待ってから再実行。
+
+### 2. デプロイ
+
+```bash
+firebase deploy --only functions,firestore:rules
+```
+
+表示された **`lineWebhook` の URL** をコピー（例: `https://asia-northeast1-ooya-direct.cloudfunctions.net/lineWebhook`）。
+
+### 3. LINE Developers で Webhook を ON
+
+Messaging API タブで:
+
+1. Webhook URL に Step 2 の URL を貼る
+2. **Use webhook** を ON → **Verify** 成功を確認
+3. **応答メッセージ / Auto-reply** は OFF
+
+### 動作確認
+
+1. `#/landlord` でログイン → 連携コード発行
+2. [友だち追加](https://lin.ee/uvetvHd) → LINE でコード送信 →「連携済み」
+3. 物件ページから問い合わせ → LINE に通知
 
 ## テスト用に物件をコマンドで1件追加する
 
@@ -118,6 +165,8 @@ VITE_BASE=/ooya-direct/ npm run build
 - `houses/{houseId}` … `ownerId`, `title`, `description`, `coverPhotoUrl`, 住所（`prefecture` / `city` / `town`）, `rent`, `managementFee`, `genre`, `depositKeyMoney`, `areaSize`, `floorArea`, `floors`, `buildingAge`, `createdAt`, `updatedAt`
 - `houses/{houseId}/photos/{photoId}` … `url`, `order`, `label`, `createdAt`（物件 1 : 画像 N）
 - `houses/{houseId}/inquiries/{inquiryId}` … `message`, `createdAt`（書き込みは Functions のみ）
+- `landlordProfiles/{ownerId}` … `lineUserId`, `linkedAt`（LINE 通知連携。書き込みは Functions のみ）
+- `lineLinkCodes/{code}` … `ownerId`, `expiresAt`（連携コード。書き込みは Functions のみ）
 
 画像ファイル本体は Firebase Storage の `houses/{houseId}/photos/{uuid}.{ext}` に保存します。
 

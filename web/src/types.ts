@@ -50,3 +50,9 @@ export type Inquiry = {
   message: string;
   createdAt: Timestamp | null;
 };
+
+/** landlordProfiles/{ownerId} — 大家の通知設定 */
+export type LandlordProfile = {
+  lineUserId: string | null;
+  linkedAt: Timestamp | null;
+};

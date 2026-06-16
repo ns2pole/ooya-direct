@@ -9,6 +9,7 @@
 # Functions
 functions/lib/
 functions/node_modules/
+functions/.env
 
 # Web
 web/dist/

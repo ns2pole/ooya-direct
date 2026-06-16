@@ -4,19 +4,38 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   where,
 } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { getDb, isFirebaseConfigured } from '../firebase';
+import { FirebaseError } from 'firebase/app';
+import { httpsCallable } from 'firebase/functions';
+import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { deleteAllHousePhotos } from '../lib/housePhotos';
 import { useAuth } from '../context/AuthContext';
 import { housePropertyListChips } from '../lib/housePropertyFields';
-import type { House } from '../types';
+import type { House, LandlordProfile } from '../types';
 import { mapHouse, houseCoverPhoto } from '../lib/mapHouse';
 import { formatDateOnly } from '../format';
 import { usePageTitle } from '../context/PageTitleContext';
+import { lineAddFriendUrl } from '../lib/lineConfig';
+
+function mapLandlordProfile(data: Record<string, unknown>): LandlordProfile {
+  const lineUserId = data.lineUserId;
+  return {
+    lineUserId: typeof lineUserId === 'string' && lineUserId ? lineUserId : null,
+    linkedAt: (data.linkedAt as LandlordProfile['linkedAt']) ?? null,
+  };
+}
+
+function messageForCallableError(err: unknown): string {
+  if (err instanceof FirebaseError) {
+    return err.message;
+  }
+  return '処理に失敗しました。';
+}
 
 function messageForAuthCode(code: string): string {
   switch (code) {
@@ -53,6 +72,42 @@ export function LandlordPage() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const [lineProfile, setLineProfile] = useState<LandlordProfile | null>(null);
+  const [lineProfileLoading, setLineProfileLoading] = useState(false);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [unlinkSubmitting, setUnlinkSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !user) {
+      setLineProfile(null);
+      setLineProfileLoading(false);
+      return;
+    }
+
+    setLineProfileLoading(true);
+    const ref = doc(getDb(), 'landlordProfiles', user.uid);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        setLineProfile(
+          snap.exists()
+            ? mapLandlordProfile(snap.data() as Record<string, unknown>)
+            : { lineUserId: null, linkedAt: null }
+        );
+        setLineProfileLoading(false);
+      },
+      () => {
+        setLineProfile({ lineUserId: null, linkedAt: null });
+        setLineProfileLoading(false);
+      }
+    );
+
+    return () => {
+      unsub();
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !user) {
@@ -115,6 +170,40 @@ export function LandlordPage() {
     await deleteAllHousePhotos(h.id);
     await deleteDoc(doc(getDb(), 'houses', h.id));
     setHouses((prev) => prev.filter((x) => x.id !== h.id));
+  }
+
+  async function onStartLineLink() {
+    if (!user) return;
+    setLinkSubmitting(true);
+    setLinkError(null);
+    try {
+      const fn = httpsCallable<Record<string, never>, { code: string }>(
+        getFns(),
+        'startLineLink'
+      );
+      const result = await fn({});
+      setLinkCode(result.data.code);
+    } catch (err) {
+      setLinkError(messageForCallableError(err));
+    } finally {
+      setLinkSubmitting(false);
+    }
+  }
+
+  async function onUnlinkLine() {
+    if (!user) return;
+    if (!window.confirm('LINE 通知の連携を解除しますか？')) return;
+    setUnlinkSubmitting(true);
+    setLinkError(null);
+    try {
+      const fn = httpsCallable(getFns(), 'unlinkLine');
+      await fn({});
+      setLinkCode(null);
+    } catch (err) {
+      setLinkError(messageForCallableError(err));
+    } finally {
+      setUnlinkSubmitting(false);
+    }
   }
 
   if (!isFirebaseConfigured) {
@@ -189,6 +278,61 @@ export function LandlordPage() {
           物件一覧
         </Link>
       </div>
+
+      <section className="stack line-link-panel" aria-labelledby="line-link-heading">
+        <h2 id="line-link-heading" className="line-link-heading">
+          LINE 通知
+        </h2>
+        {lineProfileLoading ? (
+          <p className="muted small">LINE 連携状態を確認中…</p>
+        ) : lineProfile?.lineUserId ? (
+          <div className="stack">
+            <p className="text-success">LINE 通知: 連携済み</p>
+            {lineProfile.linkedAt ? (
+              <p className="muted small">
+                連携日: {formatDateOnly(lineProfile.linkedAt)}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={unlinkSubmitting}
+              onClick={() => void onUnlinkLine()}
+            >
+              {unlinkSubmitting ? '解除中…' : '連携を解除'}
+            </button>
+          </div>
+        ) : (
+          <div className="stack">
+            <p className="muted small">
+              問い合わせが届いたときに LINE で通知を受け取れます。
+            </p>
+            <ol className="muted small line-link-steps">
+              <li>
+                <a href={lineAddFriendUrl()} target="_blank" rel="noopener noreferrer">
+                  LINE 公式アカウントを友だち追加
+                </a>
+              </li>
+              <li>下のボタンで連携コードを発行（10分間有効）</li>
+              <li>LINE のトークに6桁のコードを送信</li>
+            </ol>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={linkSubmitting}
+              onClick={() => void onStartLineLink()}
+            >
+              {linkSubmitting ? '発行中…' : '連携コードを発行'}
+            </button>
+            {linkCode ? (
+              <p>
+                連携コード: <strong className="line-link-code">{linkCode}</strong>
+              </p>
+            ) : null}
+          </div>
+        )}
+        {linkError ? <p className="text-error">{linkError}</p> : null}
+      </section>
 
       {listLoading ? <p>読み込み中…</p> : null}
       {listError ? <p className="text-error">{listError}</p> : null}
