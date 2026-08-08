@@ -12,7 +12,6 @@ import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { HousePhotoGrid } from '../components/HousePhotoGrid';
-import { HousePropertyTable } from '../components/HousePropertyTable';
 import type { House, HousePhoto, Inquiry } from '../types';
 import { mapHouse } from '../lib/mapHouse';
 import { loadHousePhotosForDisplay, photoUrlsFromList } from '../lib/housePhotos';
@@ -197,7 +196,6 @@ export function HouseDetailPage() {
           <p className="muted">説明文はありません。</p>
         )}
       </div>
-      <HousePropertyTable house={house} />
 
       <section className="stack-lg" aria-labelledby="inquiry-message-label">
         <form className="stack" onSubmit={onSubmitInquiry}>

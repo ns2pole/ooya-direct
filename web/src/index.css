@@ -380,23 +380,8 @@ code {
   text-align: right;
 }
 
-.house-carousel-body .house-list-property {
-  margin: 0.25rem 0 0.5rem;
-}
-
-.house-list-property-table {
-  margin: 0;
-}
-
-.house-property-row--values-only {
-  grid-template-columns: 1fr;
-  min-width: 0;
-}
-
-.house-property-row--values-only dd {
-  margin: 0;
-  line-height: 1.5;
-  white-space: nowrap;
+.house-carousel-body .house-property-table {
+  margin: 0.25rem 0 0;
 }
 
 .house-property-table {
@@ -723,10 +708,6 @@ code {
 
 .house-detail-description {
   margin: 0.75rem 0 1rem;
-}
-
-.house-detail-description + .house-property-table {
-  margin-top: 0;
 }
 
 .landlord-row {

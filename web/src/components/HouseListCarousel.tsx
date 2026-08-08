@@ -4,7 +4,7 @@ import type { House } from '../types';
 import { useListProgress } from '../context/PageTitleContext';
 import { houseCoverPhoto } from '../lib/mapHouse';
 import { clampCarouselIndex, houseListSummaryLines } from '../lib/houseListSummary';
-import { HouseListPropertySummary } from './HouseListPropertySummary';
+import { HousePropertyTable } from './HousePropertyTable';
 
 const SWIPE_THRESHOLD_PX = 50;
 
@@ -121,7 +121,7 @@ export function HouseListCarousel({ houses }: Props) {
         </div>
         <div className="house-carousel-body">
           <p className="house-carousel-title">{summary.title}</p>
-          <HouseListPropertySummary house={house} />
+          <HousePropertyTable house={house} />
         </div>
       </Link>
     </section>
