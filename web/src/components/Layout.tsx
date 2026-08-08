@@ -13,6 +13,7 @@ import { ScrollToTopOnNavigate } from './ScrollToTopOnNavigate';
 function HeaderEnd() {
   const crumbs = usePageHeaderValue();
   const endAction = usePageHeaderEndActionValue();
+  const listProgress = useListProgressValue();
 
   if (endAction) {
     return (
@@ -47,6 +48,14 @@ function HeaderEnd() {
           </Fragment>
         ))}
       </nav>
+    );
+  }
+
+  if (listProgress?.listedDate) {
+    return (
+      <div className="app-header-end app-header-listed-date muted">
+        掲載: {listProgress.listedDate}
+      </div>
     );
   }
 

@@ -14,6 +14,7 @@ export type PageHeaderEndAction = {
 export type ListProgress = {
   current: number;
   total: number;
+  listedDate: string;
 };
 
 type PageTitleContextValue = {

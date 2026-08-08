@@ -119,9 +119,9 @@ describe('Layout header breadcrumbs', () => {
     expect(screen.getByRole('link', { name: '大家ダイレクト' })).toHaveAttribute('href', '/');
   });
 
-  it('一覧進捗があるときブランドに件数を付ける', () => {
+  it('一覧進捗があるときブランドに件数を付け、掲載日をヘッダー右に出す', () => {
     function HomeWithProgress() {
-      useListProgress({ current: 2, total: 3 });
+      useListProgress({ current: 2, total: 3, listedDate: '2026/8/4' });
       return <p>一覧本文</p>;
     }
 
@@ -138,5 +138,6 @@ describe('Layout header breadcrumbs', () => {
     );
 
     expect(screen.getByRole('link', { name: '大家ダイレクト(2/3)' })).toHaveAttribute('href', '/');
+    expect(screen.getByText('掲載: 2026/8/4')).toBeInTheDocument();
   });
 });

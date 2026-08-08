@@ -101,4 +101,10 @@ describe('HouseListCarousel', () => {
 
     expect(screen.getByRole('link', { name: /テスト物件1/ })).toHaveAttribute('href', '/houses/h1');
   });
+
+  it('カード内に掲載日を出さない', () => {
+    renderCarousel([mockHouse('h1', 'テスト物件1')]);
+
+    expect(screen.queryByText(/掲載:/)).toBeNull();
+  });
 });

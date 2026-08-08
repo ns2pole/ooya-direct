@@ -365,24 +365,19 @@ code {
   gap: 0.45rem;
 }
 
-.house-carousel-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin: 0;
-  font-size: 0.875rem;
-}
-
 .house-carousel-title {
+  margin: 0;
+  width: 100%;
   font-size: 0.95rem;
   font-weight: 600;
-  min-width: 0;
+  word-break: break-word;
 }
 
-.house-carousel-date {
-  flex-shrink: 0;
+.app-header-listed-date {
+  font-size: 0.8rem;
+  font-weight: 500;
   white-space: nowrap;
+  text-align: right;
 }
 
 .house-carousel-body .house-list-property {

@@ -22,7 +22,11 @@ export function HouseListCarousel({ houses }: Props) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
 
-  useListProgress(count > 0 ? { current: safeIndex + 1, total: count } : null);
+  useListProgress(
+    count > 0 && summary
+      ? { current: safeIndex + 1, total: count, listedDate: summary.listedDate }
+      : null
+  );
 
   useEffect(() => {
     if (index !== safeIndex) {
@@ -116,10 +120,7 @@ export function HouseListCarousel({ houses }: Props) {
           )}
         </div>
         <div className="house-carousel-body">
-          <p className="house-carousel-meta">
-            <span className="house-carousel-title">{summary.title}</span>
-            <span className="house-carousel-date muted">掲載: {summary.listedDate}</span>
-          </p>
+          <p className="house-carousel-title">{summary.title}</p>
           <HouseListPropertySummary house={house} />
         </div>
       </Link>
