@@ -494,11 +494,13 @@ export function HouseFormPage() {
       >
         <label className="field">
           <span>タイトル</span>
-          <input
+          <textarea
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            rows={3}
             maxLength={200}
+            placeholder="Enter で改行できます"
           />
         </label>
         <label className="field">
