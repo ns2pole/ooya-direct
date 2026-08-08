@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Timestamp } from 'firebase/firestore';
 import type { House } from '../types';
 import { EMPTY_HOUSE_PROPERTY_FIELDS } from './housePropertyFields';
-import { houseListSummaryLines } from './houseListSummary';
+import { homePathForHouse, houseListSummaryLines, indexForHouseId } from './houseListSummary';
 
 function mockHouse(overrides: Partial<House> = {}): House {
   return {
@@ -37,5 +37,20 @@ describe('houseListSummaryLines', () => {
 
   it('createdAt がないとき listedDate は —', () => {
     expect(houseListSummaryLines(mockHouse({ createdAt: null })).listedDate).toBe('—');
+  });
+});
+
+describe('indexForHouseId', () => {
+  it('id に一致するインデックスを返し、無いときは 0', () => {
+    const houses = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(indexForHouseId(houses, 'b')).toBe(1);
+    expect(indexForHouseId(houses, null)).toBe(0);
+    expect(indexForHouseId(houses, 'missing')).toBe(0);
+  });
+});
+
+describe('homePathForHouse', () => {
+  it('一覧復帰用のクエリ付きパスを返す', () => {
+    expect(homePathForHouse('abc')).toBe('/?house=abc');
   });
 });

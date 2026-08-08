@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { House } from '../types';
 import { useListProgress } from '../context/PageTitleContext';
 import { houseCoverPhoto } from '../lib/mapHouse';
-import { clampCarouselIndex, houseListSummaryLines } from '../lib/houseListSummary';
+import {
+  HOUSE_LIST_QUERY_KEY,
+  clampCarouselIndex,
+  houseListSummaryLines,
+  indexForHouseId,
+} from '../lib/houseListSummary';
 import { HousePropertyTable } from './HousePropertyTable';
 
 const SWIPE_THRESHOLD_PX = 50;
@@ -13,9 +18,10 @@ type Props = {
 };
 
 export function HouseListCarousel({ houses }: Props) {
-  const [index, setIndex] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
   const count = houses.length;
-  const safeIndex = clampCarouselIndex(index, count);
+  const requestedId = searchParams.get(HOUSE_LIST_QUERY_KEY);
+  const safeIndex = clampCarouselIndex(indexForHouseId(houses, requestedId), count);
   const house = houses[safeIndex];
   const summary = house ? houseListSummaryLines(house) : null;
   const cover = house ? houseCoverPhoto(house) : null;
@@ -28,11 +34,14 @@ export function HouseListCarousel({ houses }: Props) {
       : null
   );
 
+  // URL を選択中物件の source of truth に揃える（戻る・再表示用）
   useEffect(() => {
-    if (index !== safeIndex) {
-      setIndex(safeIndex);
-    }
-  }, [index, safeIndex]);
+    if (!house) return;
+    if (searchParams.get(HOUSE_LIST_QUERY_KEY) === house.id) return;
+    const next = new URLSearchParams(searchParams);
+    next.set(HOUSE_LIST_QUERY_KEY, house.id);
+    setSearchParams(next, { replace: true });
+  }, [house, searchParams, setSearchParams]);
 
   if (!house || !summary) {
     return null;
@@ -41,12 +50,20 @@ export function HouseListCarousel({ houses }: Props) {
   const canGoPrev = safeIndex > 0;
   const canGoNext = safeIndex < count - 1;
 
+  function selectIndex(nextIndex: number) {
+    const nextHouse = houses[clampCarouselIndex(nextIndex, count)];
+    if (!nextHouse) return;
+    const next = new URLSearchParams(searchParams);
+    next.set(HOUSE_LIST_QUERY_KEY, nextHouse.id);
+    setSearchParams(next, { replace: true });
+  }
+
   function goPrev() {
-    setIndex((i) => clampCarouselIndex(i - 1, count));
+    selectIndex(safeIndex - 1);
   }
 
   function goNext() {
-    setIndex((i) => clampCarouselIndex(i + 1, count));
+    selectIndex(safeIndex + 1);
   }
 
   function onKeyDown(e: React.KeyboardEvent) {

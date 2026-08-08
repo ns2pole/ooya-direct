@@ -73,7 +73,7 @@ describe('Layout navigation', () => {
     await user.click(screen.getByRole('button', { name: '← 戻る' }));
     expect(screen.getByText('一覧ページ')).toBeInTheDocument();
     expect(screen.queryByText('物件詳細ページ')).not.toBeInTheDocument();
-    expect(window.location.hash).toBe('#/');
+    expect(window.location.hash).toBe('#/?house=abc');
     expect(scrollSpy).toHaveBeenCalled();
   });
 });

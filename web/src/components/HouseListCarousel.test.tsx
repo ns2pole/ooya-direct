@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { House } from '../types';
 import { PageTitleProvider, useListProgressValue } from '../context/PageTitleContext';
 import { HouseListCarousel } from './HouseListCarousel';
@@ -30,11 +30,17 @@ function ListProgressReader() {
   return <span data-testid="list-progress">{`${progress.current}/${progress.total}`}</span>;
 }
 
-function renderCarousel(houses: House[]) {
+function LocationReader() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
+
+function renderCarousel(houses: House[], initialEntry = '/') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <PageTitleProvider>
         <ListProgressReader />
+        <LocationReader />
         <HouseListCarousel houses={houses} />
       </PageTitleProvider>
     </MemoryRouter>
@@ -55,7 +61,7 @@ describe('HouseListCarousel', () => {
     cleanup();
   });
 
-  it('2件あるとき左スワイプで2件目、右スワイプで1件目に戻る', () => {
+  it('2件あるとき左スワイプで2件目、右スワイプで1件目に戻る', async () => {
     const houses = [mockHouse('h1', 'テスト物件1'), mockHouse('h2', 'テスト物件2')];
     renderCarousel(houses);
 
@@ -64,15 +70,28 @@ describe('HouseListCarousel', () => {
     expect(screen.getByText('左右スワイプで他物件が見れます')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '次の物件' })).toBeNull();
     expect(screen.queryByRole('button', { name: '前の物件' })).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent('house=h1');
+    });
 
     const section = screen.getByLabelText('物件一覧');
     swipe(section, 200, 100);
     expect(screen.getByText('テスト物件2')).toBeInTheDocument();
     expect(screen.getByTestId('list-progress')).toHaveTextContent('2/2');
+    expect(screen.getByTestId('location-search')).toHaveTextContent('house=h2');
 
     swipe(section, 100, 200);
     expect(screen.getByText('テスト物件1')).toBeInTheDocument();
     expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
+    expect(screen.getByTestId('location-search')).toHaveTextContent('house=h1');
+  });
+
+  it('URL の house クエリで初期表示物件を復元する', () => {
+    const houses = [mockHouse('h1', 'テスト物件1'), mockHouse('h2', 'テスト物件2')];
+    renderCarousel(houses, '/?house=h2');
+
+    expect(screen.getByText('テスト物件2')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('2/2');
   });
 
   it('1件のときスワイプヒントを出さない', () => {
