@@ -67,7 +67,7 @@ describe('HouseListCarousel', () => {
 
     expect(screen.getByText('テスト物件1')).toBeInTheDocument();
     expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
-    expect(screen.getByText('左右スワイプで他物件が見れます')).toBeInTheDocument();
+    expect(screen.getByText('画像タップで詳細、左右スワイプで他物件が見れます。')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '次の物件' })).toBeNull();
     expect(screen.queryByRole('button', { name: '前の物件' })).toBeNull();
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe('HouseListCarousel', () => {
     renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
     expect(screen.getByTestId('list-progress')).toHaveTextContent('1/1');
-    expect(screen.queryByText('左右スワイプで他物件が見れます')).toBeNull();
+    expect(screen.queryByText('画像タップで詳細、左右スワイプで他物件が見れます。')).toBeNull();
   });
 
   it('物件条件を詳細と同じテーブルで表示する', () => {

@@ -117,7 +117,7 @@ export function HouseListCarousel({ houses }: Props) {
       tabIndex={-1}
     >
       {count > 1 ? (
-        <p className="house-carousel-swipe-hint">左右スワイプで他物件が見れます</p>
+        <p className="house-carousel-swipe-hint">画像タップで詳細、左右スワイプで他物件が見れます。</p>
       ) : null}
 
       <div className="house-carousel-card">
