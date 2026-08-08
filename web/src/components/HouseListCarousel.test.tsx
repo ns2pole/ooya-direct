@@ -93,7 +93,18 @@ describe('HouseListCarousel', () => {
     expect(screen.getByText('三重県 名張市 テスト町')).toBeInTheDocument();
   });
 
-  it('カード全体が詳細ページへのリンク', () => {
+  it('参考リンクがあるときテーブル末尾に外部リンクを出す', () => {
+    const house = mockHouse('h1', 'テスト物件1');
+    house.referenceUrl = 'https://www.yahoo.co.jp';
+    renderCarousel([house]);
+
+    const link = screen.getByRole('link', { name: 'https://www.yahoo.co.jp' });
+    expect(link).toHaveAttribute('href', 'https://www.yahoo.co.jp');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.getByText('参考リンク')).toBeInTheDocument();
+  });
+
+  it('カードのタイトルが詳細ページへのリンク', () => {
     renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
     expect(screen.getByRole('link', { name: /テスト物件1/ })).toHaveAttribute('href', '/houses/h1');

@@ -41,7 +41,8 @@ service cloud.firestore {
           'createdAt', 'updatedAt',
           'prefecture', 'city', 'town',
           'rent', 'managementFee', 'genre', 'depositKeyMoney',
-          'areaSize', 'floorArea', 'floors', 'buildingAge'
+          'areaSize', 'floorArea', 'floors', 'buildingAge',
+          'referenceUrl'
         ])
         && request.resource.data.prefecture is string
         && request.resource.data.prefecture.size() <= 30
@@ -65,6 +66,8 @@ service cloud.firestore {
         && request.resource.data.floors.size() <= 50
         && request.resource.data.buildingAge is string
         && request.resource.data.buildingAge.size() <= 50
+        && request.resource.data.referenceUrl is string
+        && request.resource.data.referenceUrl.size() <= 2048
         && validCoverPhotoUrl()
         && validLegacyPhotoUrl()
         && validLegacyPhotoUrls();

@@ -316,28 +316,30 @@ code {
 }
 
 .house-carousel-card {
-  display: block;
-  color: inherit;
-  text-decoration: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   background: #fafbff;
 }
 
-.house-carousel-card *,
-.house-carousel-card:hover,
-.house-carousel-card:focus-visible {
+.house-carousel-card:hover {
+  border-color: #c7d2fe;
+}
+
+.house-carousel-card-main {
+  display: block;
+  color: inherit;
   text-decoration: none;
 }
 
-.house-carousel-card:hover,
-.house-carousel-card:focus-visible {
+.house-carousel-card-main:hover,
+.house-carousel-card-main:focus-visible {
   color: inherit;
+  text-decoration: none;
 }
 
-.house-carousel-card:hover {
-  border-color: #c7d2fe;
+.house-carousel-card-main .house-carousel-title {
+  padding: 1rem 1.1rem 0;
 }
 
 .house-carousel-hero {
@@ -414,6 +416,18 @@ code {
 .house-property-row dd {
   margin: 0;
   line-height: 1.5;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.house-property-external-link {
+  color: var(--primary);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.house-property-external-link:hover {
+  color: var(--primary-hover);
 }
 
 .house-hero {

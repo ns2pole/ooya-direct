@@ -103,27 +103,29 @@ export function HouseListCarousel({ houses }: Props) {
         <p className="house-carousel-swipe-hint">左右スワイプで他物件が見れます</p>
       ) : null}
 
-      <Link to={`/houses/${house.id}`} className="house-carousel-card">
-        <div className="house-carousel-hero">
-          {cover ? (
-            <img
-              src={cover}
-              alt=""
-              className="house-carousel-hero-img"
-              width={880}
-              height={660}
-              loading="eager"
-              decoding="async"
-            />
-          ) : (
-            <div className="house-carousel-hero-img house-carousel-hero-img--empty" aria-hidden />
-          )}
-        </div>
-        <div className="house-carousel-body">
+      <div className="house-carousel-card">
+        <Link to={`/houses/${house.id}`} className="house-carousel-card-main">
+          <div className="house-carousel-hero">
+            {cover ? (
+              <img
+                src={cover}
+                alt=""
+                className="house-carousel-hero-img"
+                width={880}
+                height={660}
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <div className="house-carousel-hero-img house-carousel-hero-img--empty" aria-hidden />
+            )}
+          </div>
           <p className="house-carousel-title">{summary.title}</p>
+        </Link>
+        <div className="house-carousel-body">
           <HousePropertyTable house={house} />
         </div>
-      </Link>
+      </div>
     </section>
   );
 }

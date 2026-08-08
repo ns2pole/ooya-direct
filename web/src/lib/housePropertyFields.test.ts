@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { House } from '../types';
 import {
   EMPTY_HOUSE_PROPERTY_FIELDS,
+  hrefForReferenceUrl,
   housePropertyDetailRows,
   housePropertyListChips,
   trimHousePropertyFields,
@@ -57,6 +58,27 @@ describe('housePropertyDetailRows', () => {
       { label: '築年数', value: '築15年' },
       { label: '地域', value: '三重県 名張市 桔梗が丘一番町' },
     ]);
+  });
+
+  it('参考リンクは地域の後に出し、未設定なら省略する', () => {
+    expect(
+      housePropertyDetailRows(mockHouse({ referenceUrl: 'https://www.yahoo.co.jp' })).at(-1)
+    ).toEqual({
+      label: '参考リンク',
+      value: 'https://www.yahoo.co.jp',
+      href: 'https://www.yahoo.co.jp',
+    });
+    expect(
+      housePropertyDetailRows(mockHouse({ referenceUrl: '' })).map((r) => r.label)
+    ).not.toContain('参考リンク');
+  });
+});
+
+describe('hrefForReferenceUrl', () => {
+  it('空は null、スキームなしは https を補う', () => {
+    expect(hrefForReferenceUrl('')).toBeNull();
+    expect(hrefForReferenceUrl('www.yahoo.co.jp')).toBe('https://www.yahoo.co.jp');
+    expect(hrefForReferenceUrl('https://www.yahoo.co.jp')).toBe('https://www.yahoo.co.jp');
   });
 });
 

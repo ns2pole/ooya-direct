@@ -12,6 +12,7 @@ export type HousePropertyFields = {
   floorArea: string;
   floors: string;
   buildingAge: string;
+  referenceUrl: string;
 };
 
 export const EMPTY_HOUSE_PROPERTY_FIELDS: HousePropertyFields = {
@@ -23,6 +24,7 @@ export const EMPTY_HOUSE_PROPERTY_FIELDS: HousePropertyFields = {
   floorArea: '',
   floors: '',
   buildingAge: '',
+  referenceUrl: '',
 };
 
 export const HOUSE_PROPERTY_FIELD_KEYS = [
@@ -34,9 +36,15 @@ export const HOUSE_PROPERTY_FIELD_KEYS = [
   'floorArea',
   'floors',
   'buildingAge',
+  'referenceUrl',
 ] as const satisfies readonly (keyof HousePropertyFields)[];
 
-type DetailRow = { label: string; value: string };
+export type DetailRow = {
+  label: string;
+  value: string;
+  /** 設定時は外部リンクとして描画 */
+  href?: string;
+};
 
 const DETAIL_SPECS: { key: keyof HousePropertyFields; label: string }[] = [
   { key: 'rent', label: '家賃' },
@@ -49,6 +57,16 @@ const DETAIL_SPECS: { key: keyof HousePropertyFields; label: string }[] = [
   { key: 'buildingAge', label: '築年数' },
 ];
 
+/** 表示用に http(s) を補完する。空や不正っぽい値はそのまま返す */
+export function hrefForReferenceUrl(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^\/\//.test(value)) return `https:${value}`;
+  if (/^[a-z0-9][a-z0-9-]*\./i.test(value)) return `https://${value}`;
+  return value;
+}
+
 export function readHousePropertyFields(data: Record<string, unknown>): HousePropertyFields {
   return {
     rent: String(data.rent ?? ''),
@@ -59,6 +77,7 @@ export function readHousePropertyFields(data: Record<string, unknown>): HousePro
     floorArea: String(data.floorArea ?? ''),
     floors: String(data.floors ?? ''),
     buildingAge: String(data.buildingAge ?? ''),
+    referenceUrl: String(data.referenceUrl ?? ''),
   };
 }
 
@@ -83,6 +102,15 @@ export function housePropertyDetailRows(h: House): DetailRow[] {
   }
   const location = houseLocationLine(h);
   if (location) rows.push({ label: '地域', value: location });
+  const referenceUrl = h.referenceUrl.trim();
+  if (referenceUrl) {
+    const href = hrefForReferenceUrl(referenceUrl);
+    rows.push({
+      label: '参考リンク',
+      value: referenceUrl,
+      ...(href ? { href } : {}),
+    });
+  }
   return rows;
 }
 

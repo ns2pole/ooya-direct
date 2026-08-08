@@ -41,6 +41,8 @@ export type House = {
   floors: string;
   /** 築年数（表示用テキスト） */
   buildingAge: string;
+  /** 参考リンク（外部 URL。未設定は空文字） */
+  referenceUrl: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };

@@ -97,6 +97,19 @@ export function HousePropertyFormFields({ fields, onChange }: Props) {
           />
         </label>
       </div>
+
+      <label className="field">
+        <span>参考リンク</span>
+        <input
+          type="url"
+          value={fields.referenceUrl}
+          onChange={(e) => onChange('referenceUrl', e.target.value)}
+          maxLength={2048}
+          placeholder="例: https://www.yahoo.co.jp"
+          inputMode="url"
+          autoComplete="url"
+        />
+      </label>
     </div>
   );
 }
