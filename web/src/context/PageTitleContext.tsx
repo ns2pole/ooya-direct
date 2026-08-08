@@ -11,11 +11,18 @@ export type PageHeaderEndAction = {
   focusId?: string;
 };
 
+export type ListProgress = {
+  current: number;
+  total: number;
+};
+
 type PageTitleContextValue = {
   crumbs: PageHeaderCrumb[];
   setCrumbs: (crumbs: PageHeaderCrumb[]) => void;
   endAction: PageHeaderEndAction | null;
   setEndAction: (action: PageHeaderEndAction | null) => void;
+  listProgress: ListProgress | null;
+  setListProgress: (progress: ListProgress | null) => void;
 };
 
 const PageTitleContext = createContext<PageTitleContextValue | null>(null);
@@ -23,9 +30,10 @@ const PageTitleContext = createContext<PageTitleContextValue | null>(null);
 export function PageTitleProvider({ children }: { children: ReactNode }) {
   const [crumbs, setCrumbs] = useState<PageHeaderCrumb[]>([]);
   const [endAction, setEndAction] = useState<PageHeaderEndAction | null>(null);
+  const [listProgress, setListProgress] = useState<ListProgress | null>(null);
   const value = useMemo(
-    () => ({ crumbs, setCrumbs, endAction, setEndAction }),
-    [crumbs, endAction]
+    () => ({ crumbs, setCrumbs, endAction, setEndAction, listProgress, setListProgress }),
+    [crumbs, endAction, listProgress]
   );
   return <PageTitleContext.Provider value={value}>{children}</PageTitleContext.Provider>;
 }
@@ -60,4 +68,18 @@ export function usePageHeaderValue(): PageHeaderCrumb[] {
 
 export function usePageHeaderEndActionValue(): PageHeaderEndAction | null {
   return useContext(PageTitleContext)?.endAction ?? null;
+}
+
+export function useListProgress(progress: ListProgress | null) {
+  const setListProgress = useContext(PageTitleContext)?.setListProgress;
+  const serialized = JSON.stringify(progress);
+  useEffect(() => {
+    if (!setListProgress) return;
+    setListProgress(progress ? (JSON.parse(serialized) as ListProgress) : null);
+    return () => setListProgress(null);
+  }, [serialized, setListProgress]);
+}
+
+export function useListProgressValue(): ListProgress | null {
+  return useContext(PageTitleContext)?.listProgress ?? null;
 }

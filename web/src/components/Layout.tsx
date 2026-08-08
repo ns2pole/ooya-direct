@@ -1,6 +1,10 @@
 import { Fragment } from 'react';
 import { Link, Outlet, useMatch } from 'react-router-dom';
-import { usePageHeaderEndActionValue, usePageHeaderValue } from '../context/PageTitleContext';
+import {
+  useListProgressValue,
+  usePageHeaderEndActionValue,
+  usePageHeaderValue,
+} from '../context/PageTitleContext';
 import { scrollToElementId } from '../lib/scrollToElement';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
 import { HouseDetailBackButton } from './HouseDetailBackButton';
@@ -51,6 +55,10 @@ function HeaderEnd() {
 
 export function Layout() {
   const isHouseDetail = Boolean(useMatch('/houses/:houseId'));
+  const listProgress = useListProgressValue();
+  const brandLabel = listProgress
+    ? `大家ダイレクト(${listProgress.current}/${listProgress.total})`
+    : '大家ダイレクト';
 
   return (
     <div className="app-shell">
@@ -61,7 +69,7 @@ export function Layout() {
             {isHouseDetail ? <HouseDetailBackButton /> : null}
           </div>
           <Link to="/" className="brand app-header-brand">
-            大家ダイレクト
+            {brandLabel}
           </Link>
           <HeaderEnd />
         </div>

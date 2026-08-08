@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { House } from '../types';
+import { PageTitleProvider, useListProgressValue } from '../context/PageTitleContext';
 import { HouseListCarousel } from './HouseListCarousel';
 import { EMPTY_HOUSE_PROPERTY_FIELDS } from '../lib/housePropertyFields';
 
@@ -23,49 +24,66 @@ function mockHouse(id: string, title: string): House {
   };
 }
 
+function ListProgressReader() {
+  const progress = useListProgressValue();
+  if (!progress) return <span data-testid="list-progress">none</span>;
+  return <span data-testid="list-progress">{`${progress.current}/${progress.total}`}</span>;
+}
+
+function renderCarousel(houses: House[]) {
+  return render(
+    <MemoryRouter>
+      <PageTitleProvider>
+        <ListProgressReader />
+        <HouseListCarousel houses={houses} />
+      </PageTitleProvider>
+    </MemoryRouter>
+  );
+}
+
+function swipe(section: HTMLElement, fromX: number, toX: number) {
+  fireEvent.touchStart(section, {
+    changedTouches: [{ clientX: fromX, clientY: 100 }],
+  });
+  fireEvent.touchEnd(section, {
+    changedTouches: [{ clientX: toX, clientY: 100 }],
+  });
+}
+
 describe('HouseListCarousel', () => {
   afterEach(() => {
     cleanup();
   });
 
-  it('2件あるとき › で2件目、‹ で1件目に戻る', () => {
+  it('2件あるとき左スワイプで2件目、右スワイプで1件目に戻る', () => {
     const houses = [mockHouse('h1', 'テスト物件1'), mockHouse('h2', 'テスト物件2')];
-
-    render(
-      <MemoryRouter>
-        <HouseListCarousel houses={houses} />
-      </MemoryRouter>
-    );
+    renderCarousel(houses);
 
     expect(screen.getByText('テスト物件1')).toBeInTheDocument();
-    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
+    expect(screen.getByText('左右スワイプで他物件が見れます')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '次の物件' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '前の物件' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: '次の物件' }));
+    const section = screen.getByLabelText('物件一覧');
+    swipe(section, 200, 100);
     expect(screen.getByText('テスト物件2')).toBeInTheDocument();
-    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('2/2');
 
-    fireEvent.click(screen.getByRole('button', { name: '前の物件' }));
+    swipe(section, 100, 200);
     expect(screen.getByText('テスト物件1')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
   });
 
-  it('1件のとき前後ボタンは disabled', () => {
-    render(
-      <MemoryRouter>
-        <HouseListCarousel houses={[mockHouse('h1', 'テスト物件1')]} />
-      </MemoryRouter>
-    );
+  it('1件のときスワイプヒントを出さない', () => {
+    renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
-    expect(screen.getByRole('button', { name: '前の物件' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '次の物件' })).toBeDisabled();
-    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('1/1');
+    expect(screen.queryByText('左右スワイプで他物件が見れます')).toBeNull();
   });
 
   it('物件条件を一覧用に表示する', () => {
-    render(
-      <MemoryRouter>
-        <HouseListCarousel houses={[mockHouse('h1', 'テスト物件1')]} />
-      </MemoryRouter>
-    );
+    renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
     expect(screen.getByText('家賃')).toBeInTheDocument();
     expect(screen.getByText('6万円')).toBeInTheDocument();
@@ -79,11 +97,7 @@ describe('HouseListCarousel', () => {
   });
 
   it('カード全体が詳細ページへのリンク', () => {
-    render(
-      <MemoryRouter>
-        <HouseListCarousel houses={[mockHouse('h1', 'テスト物件1')]} />
-      </MemoryRouter>
-    );
+    renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
     expect(screen.getByRole('link', { name: /テスト物件1/ })).toHaveAttribute('href', '/houses/h1');
   });

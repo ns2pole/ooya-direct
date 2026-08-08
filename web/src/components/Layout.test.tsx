@@ -2,7 +2,12 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './Layout';
-import { PageTitleProvider, usePageHeader, usePageHeaderEndAction } from '../context/PageTitleContext';
+import {
+  PageTitleProvider,
+  useListProgress,
+  usePageHeader,
+  usePageHeaderEndAction,
+} from '../context/PageTitleContext';
 import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 import * as scrollToElement from '../lib/scrollToElement';
 
@@ -112,5 +117,26 @@ describe('Layout header breadcrumbs', () => {
     );
 
     expect(screen.getByRole('link', { name: '大家ダイレクト' })).toHaveAttribute('href', '/');
+  });
+
+  it('一覧進捗があるときブランドに件数を付ける', () => {
+    function HomeWithProgress() {
+      useListProgress({ current: 2, total: 3 });
+      return <p>一覧本文</p>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <PageTitleProvider>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<HomeWithProgress />} />
+            </Route>
+          </Routes>
+        </PageTitleProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: '大家ダイレクト(2/3)' })).toHaveAttribute('href', '/');
   });
 });

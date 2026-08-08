@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { House } from '../types';
+import { useListProgress } from '../context/PageTitleContext';
 import { houseCoverPhoto } from '../lib/mapHouse';
 import { clampCarouselIndex, houseListSummaryLines } from '../lib/houseListSummary';
 import { HouseListPropertySummary } from './HouseListPropertySummary';
+
+const SWIPE_THRESHOLD_PX = 50;
 
 type Props = {
   houses: House[];
@@ -16,6 +19,10 @@ export function HouseListCarousel({ houses }: Props) {
   const house = houses[safeIndex];
   const summary = house ? houseListSummaryLines(house) : null;
   const cover = house ? houseCoverPhoto(house) : null;
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipedRef = useRef(false);
+
+  useListProgress(count > 0 ? { current: safeIndex + 1, total: count } : null);
 
   useEffect(() => {
     if (index !== safeIndex) {
@@ -49,37 +56,48 @@ export function HouseListCarousel({ houses }: Props) {
     }
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.changedTouches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    swipedRef.current = false;
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || count < 2) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy)) return;
+
+    swipedRef.current = true;
+    if (dx > 0 && canGoPrev) goPrev();
+    if (dx < 0 && canGoNext) goNext();
+  }
+
+  function onClickCapture(e: React.MouseEvent) {
+    if (!swipedRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    swipedRef.current = false;
+  }
+
   return (
     <section
       className="house-carousel"
       aria-label="物件一覧"
       aria-live="polite"
       onKeyDown={onKeyDown}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onClickCapture={onClickCapture}
       tabIndex={-1}
     >
-      <div className="house-carousel-nav">
-        <button
-          type="button"
-          className="btn house-carousel-nav-btn"
-          aria-label="前の物件"
-          disabled={!canGoPrev}
-          onClick={goPrev}
-        >
-          {'<'}
-        </button>
-        <span className="house-carousel-counter" aria-live="polite">
-          {safeIndex + 1} / {count}
-        </span>
-        <button
-          type="button"
-          className="btn house-carousel-nav-btn"
-          aria-label="次の物件"
-          disabled={!canGoNext}
-          onClick={goNext}
-        >
-          {'>'}
-        </button>
-      </div>
+      {count > 1 ? (
+        <p className="house-carousel-swipe-hint">左右スワイプで他物件が見れます</p>
+      ) : null}
 
       <Link to={`/houses/${house.id}`} className="house-carousel-card">
         <div className="house-carousel-hero">

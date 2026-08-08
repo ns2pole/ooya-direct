@@ -303,45 +303,16 @@ code {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  touch-action: pan-y;
 }
 
-.house-carousel-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.house-carousel-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 3.25rem;
-  min-height: 3.25rem;
-  padding: 0;
-  font-size: 2rem;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--text);
-  border: 3px solid #475569;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.house-carousel-nav-btn:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: #eef2ff;
-}
-
-.house-carousel-nav-btn:disabled {
-  opacity: 0.45;
-}
-
-.house-carousel-counter {
-  font-size: 0.95rem;
-  font-weight: 600;
+.house-carousel-swipe-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
 }
 
 .house-carousel-card {
