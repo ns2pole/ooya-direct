@@ -182,7 +182,7 @@ code {
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   padding: 1.25rem 1.35rem;
   box-shadow: var(--shadow);
 }
