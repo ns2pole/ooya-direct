@@ -13,6 +13,7 @@ functions/.env
 
 # Flutter
 .dart_tool/
+__pycache__/
 .flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
@@ -22,3 +23,7 @@ build/
 firebase_defines.json
 firebase_defines.*.json
 !firebase_defines.example.json
+
+# Codemagic / iOS signing secrets
+.codemagic_api_token
+codemagic-signing/

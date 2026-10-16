@@ -1,0 +1,108 @@
+# Codemagic: iOS をクラウド Mac で IPA ビルドする。
+# App Store への提出はしない。joymath / joyphysics と同じく、
+# Developer Portal の UI 連携は使わず App Store Connect API キーで署名する。
+#
+# 秘密情報はリポジトリに置かない。Codemagic の環境変数グループで渡す。
+#   ios_signing_files
+#     CM_CERTIFICATE            配布証明書 .p12 の base64
+#     CM_CERTIFICATE_PASSWORD   そのパスワード
+#     APP_STORE_CONNECT_PRIVATE_KEY   AuthKey_*.p8 の全文
+#   firebase_credentials
+#     FIREBASE_API_KEY / FIREBASE_AUTH_DOMAIN / FIREBASE_PROJECT_ID
+#     FIREBASE_STORAGE_BUCKET / FIREBASE_MESSAGING_SENDER_ID / FIREBASE_APP_ID
+#
+# 起動: python3 scripts/start_codemagic_build.py
+
+workflows:
+  ios-ipa-build:
+    name: iOS IPA Build
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - ios_signing_files
+        - firebase_credentials
+      vars:
+        APP_STORE_CONNECT_KEY_IDENTIFIER: ATBD5UGJTG
+        APP_STORE_CONNECT_ISSUER_ID: c64fb6be-f1d2-4e04-80b5-2841def3da52
+        BUNDLE_ID: com.ooyadirect.ooyaDirect
+      xcode: latest
+      flutter: stable
+      cocoapods: default
+    scripts:
+      - name: Flutter pub get
+        script: |
+          set -euo pipefail
+          flutter pub get
+      - name: CocoaPods (ios)
+        script: |
+          set -euo pipefail
+          cd ios && pod install && cd ..
+      - name: Prepare Xcode project
+        script: |
+          set -euo pipefail
+          flutter build ios --release --config-only
+      - name: Set up keychain
+        script: keychain initialize
+      - name: Install distribution certificate
+        script: |
+          set -euo pipefail
+          python3 - << 'PY'
+          import base64, os
+          from pathlib import Path
+          raw = os.environ.get("CM_CERTIFICATE", "").strip()
+          if not raw:
+              raise SystemExit("ERROR: CM_CERTIFICATE が空です")
+          Path("/tmp/certificate.p12").write_bytes(base64.b64decode(raw))
+          print("decoded distribution certificate")
+          PY
+          keychain add-certificates \
+            --certificate /tmp/certificate.p12 \
+            --certificate-password "$CM_CERTIFICATE_PASSWORD"
+      - name: Create App Store provisioning profile
+        script: |
+          set -euo pipefail
+          python3 scripts/ensure_ios_appstore_profile.py
+      - name: Apply provisioning profile
+        script: |
+          set -euo pipefail
+          xcode-project use-profiles
+          if [ ! -f /Users/builder/export_options.plist ]; then
+            echo "ERROR: /Users/builder/export_options.plist が生成されていません"
+            exit 1
+          fi
+          echo "=== export_options.plist ==="
+          cat /Users/builder/export_options.plist
+      - name: Flutter build IPA
+        script: |
+          set -euo pipefail
+          VER_LINE=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | tr -d "'\"")
+          VERSION_NAME="${VER_LINE%+*}"
+          VERSION_CODE="${VER_LINE#*+}"
+          echo "Building $VERSION_NAME ($VERSION_CODE)"
+          for key in \
+            FIREBASE_API_KEY \
+            FIREBASE_AUTH_DOMAIN \
+            FIREBASE_PROJECT_ID \
+            FIREBASE_STORAGE_BUCKET \
+            FIREBASE_MESSAGING_SENDER_ID \
+            FIREBASE_APP_ID
+          do
+            eval "value=\${$key:-}"
+            if [ -z "$value" ]; then
+              echo "ERROR: $key が空です"
+              exit 1
+            fi
+          done
+          flutter build ipa --release \
+            --build-name="$VERSION_NAME" \
+            --build-number="$VERSION_CODE" \
+            --dart-define=FIREBASE_API_KEY="$FIREBASE_API_KEY" \
+            --dart-define=FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
+            --dart-define=FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+            --dart-define=FIREBASE_STORAGE_BUCKET="$FIREBASE_STORAGE_BUCKET" \
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID" \
+            --dart-define=FIREBASE_APP_ID="$FIREBASE_APP_ID" \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
