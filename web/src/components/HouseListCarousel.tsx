@@ -117,11 +117,20 @@ export function HouseListCarousel({ houses }: Props) {
       tabIndex={-1}
     >
       {count > 1 ? (
-        <p className="house-carousel-swipe-hint">画像タップで詳細、左右スワイプで他物件が見れます。</p>
+        <p className="house-carousel-swipe-hint">
+          <span className="house-carousel-swipe-hint-em">画像タップ</span>
+          で詳細、
+          <span className="house-carousel-swipe-hint-em">左右スワイプ</span>
+          で他物件へ
+        </p>
       ) : null}
 
       <div className="house-carousel-card">
-        <Link to={`/houses/${house.id}`} className="house-carousel-card-main">
+        <Link
+          to={`/houses/${house.id}`}
+          className="house-carousel-card-main"
+          aria-label={`${summary.title}の写真`}
+        >
           <div className="house-carousel-hero">
             {cover ? (
               <img
@@ -137,8 +146,38 @@ export function HouseListCarousel({ houses }: Props) {
               <div className="house-carousel-hero-img house-carousel-hero-img--empty" aria-hidden />
             )}
           </div>
-          <p className="house-carousel-title">{summary.title}</p>
         </Link>
+        <div className="house-carousel-title-row">
+          {count > 1 ? (
+            <button
+              type="button"
+              className="house-carousel-nav house-carousel-nav--prev"
+              aria-label="前の物件"
+              disabled={!canGoPrev}
+              onClick={goPrev}
+            >
+              <span className="house-carousel-nav-mark" aria-hidden="true">
+                ▼
+              </span>
+            </button>
+          ) : null}
+          <Link to={`/houses/${house.id}`} className="house-carousel-title">
+            {summary.title}
+          </Link>
+          {count > 1 ? (
+            <button
+              type="button"
+              className="house-carousel-nav house-carousel-nav--next"
+              aria-label="次の物件"
+              disabled={!canGoNext}
+              onClick={goNext}
+            >
+              <span className="house-carousel-nav-mark" aria-hidden="true">
+                ▼
+              </span>
+            </button>
+          ) : null}
+        </div>
         <div className="house-carousel-body">
           <HousePropertyTable house={house} />
         </div>
