@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../firebase/firebase_env.dart';
-import '../logic/house.dart';
+import '../logic/auth_messages.dart';
 import '../state/scope.dart';
 import '../widgets/bind_chrome.dart';
 import '../widgets/ui.dart';

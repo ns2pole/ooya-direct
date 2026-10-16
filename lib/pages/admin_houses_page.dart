@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../data/admin_repository.dart';
 import '../firebase/firebase_env.dart';
 import '../logic/house.dart';
+import '../logic/portal_label.dart';
 import '../state/app_state.dart';
 import '../state/scope.dart';
 import '../theme/app_colors.dart';
@@ -11,147 +12,104 @@ import '../theme/app_text.dart';
 import '../widgets/admin_table.dart';
 import '../widgets/bind_chrome.dart';
 import '../widgets/ui.dart';
+import 'admin_catalog.dart';
 
-class AdminHousesPage extends StatefulWidget {
+class AdminHousesPage extends StatelessWidget {
   const AdminHousesPage({super.key});
 
   @override
-  State<AdminHousesPage> createState() => _AdminHousesPageState();
+  Widget build(BuildContext context) {
+    return AdminCatalogHost(
+      builder: (context, snapshot) {
+        if (snapshot.loading) {
+          return const BindChrome(child: Panel(child: Text('読み込み中…')));
+        }
+        final catalog = snapshot.catalog;
+        final status = catalog?.status;
+        final syncLabel = status?.lastSyncedAt == null
+            ? null
+            : '最終同期: ${formatDate(status!.lastSyncedAt)}（新規 ${status.created}件、更新 ${status.updated}件、変化なし ${status.unchanged}件、成約のため削除 ${status.removed}件）';
+        return BindChrome(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (snapshot.error != null) ...[
+                ErrorText(snapshot.error!),
+                const SizedBox(height: 12),
+              ],
+              Panel(
+                child: VStack(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppButton(label: '新規登録', primary: true, onPressed: () => context.go('/landlord/houses/new')),
+                    ),
+                    MutedText(syncLabel ?? 'まだ同期していません。', small: true),
+                    if (catalog == null || catalog.houses.isEmpty)
+                      const MutedText('まだ物件がありません。')
+                    else
+                      _HouseTable(
+                        houses: catalog.houses,
+                        landlords: catalog.landlords,
+                        sources: catalog.sources,
+                        onHide: (house, hidden) => _hide(context, snapshot, house, hidden),
+                        onDelete: (house) => _delete(context, snapshot, house),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
-class _AdminHousesPageState extends State<AdminHousesPage> {
-  final _repo = AdminRepository();
-  AdminCatalog? _catalog;
-  bool _loading = true;
-  String? _error;
-  AdminRefresh? _refresh;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final refresh = RefreshScope.of(context);
-    if (!identical(_refresh, refresh)) {
-      _refresh?.removeListener(_reload);
-      _refresh = refresh;
-      refresh.addListener(_reload);
-      _reload();
-    }
-  }
-
-  @override
-  void dispose() {
-    _refresh?.removeListener(_reload);
-    super.dispose();
-  }
-
-  Future<void> _reload() async {
-    final user = AuthScope.of(context).user;
-    if (user == null) return;
-    setState(() {
-      _loading = _catalog == null;
-      _error = null;
-    });
-    try {
-      final catalog = await _repo.load(user.uid);
-      if (!mounted) return;
-      setState(() {
-        _catalog = catalog;
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = firebaseErrorText(error, fallback: '一覧の取得に失敗しました。');
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _hide(House house, bool hidden) async {
-    final title = house.title.trim().isEmpty ? '（無題）' : house.title.trim();
-    final verb = hidden ? '公開ページから外します' : '公開ページに戻します';
-    final ok = await askConfirm(context, '「$title」を$verbか？');
-    if (!ok) return;
-    try {
-      await _repo.setHouseHidden(house.id, hidden);
-      if (!mounted || _catalog == null) return;
-      setState(() {
-        _catalog = AdminCatalog(
-          houses: _catalog!.houses.map((item) => item.id == house.id ? item.copyWith(hidden: hidden) : item).toList(),
-          landlords: _catalog!.landlords,
-          sources: _catalog!.sources,
-          status: _catalog!.status,
-        );
-      });
-    } catch (error) {
-      if (!mounted) return;
-      ToastScope.of(context).show(firebaseErrorText(error, fallback: '更新に失敗しました。'), ToastKind.error);
-    }
-  }
-
-  Future<void> _delete(House house) async {
-    final title = house.title.trim().isEmpty ? '（無題）' : house.title.trim();
-    final ok = await askConfirm(context, '「$title」を削除しますか？');
-    if (!ok) return;
-    try {
-      await _repo.deleteManualHouse(house.id);
-      if (!mounted || _catalog == null) return;
-      setState(() {
-        _catalog = AdminCatalog(
-          houses: _catalog!.houses.where((item) => item.id != house.id).toList(),
-          landlords: _catalog!.landlords,
-          sources: _catalog!.sources,
-          status: _catalog!.status,
-        );
-      });
-    } catch (error) {
-      if (!mounted) return;
-      ToastScope.of(context).show(firebaseErrorText(error, fallback: '削除に失敗しました。'), ToastKind.error);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const BindChrome(child: Panel(child: Text('読み込み中…')));
-    }
-    final catalog = _catalog;
-    final status = catalog?.status;
-    final syncLabel = status?.lastSyncedAt == null
-        ? null
-        : '最終同期: ${formatDate(status!.lastSyncedAt)}（新規 ${status.created}件、更新 ${status.updated}件、変化なし ${status.unchanged}件、成約のため削除 ${status.removed}件）';
-    return BindChrome(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_error != null) ...[
-            ErrorText(_error!),
-            const SizedBox(height: 12),
-          ],
-          Panel(
-            child: VStack(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: AppButton(label: '新規登録', primary: true, onPressed: () => context.go('/landlord/houses/new')),
-                ),
-                MutedText(syncLabel ?? 'まだ同期していません。', small: true),
-                if (catalog == null || catalog.houses.isEmpty)
-                  const MutedText('まだ物件がありません。')
-                else
-                  _HouseTable(
-                    houses: catalog.houses,
-                    landlords: catalog.landlords,
-                    sources: catalog.sources,
-                    onHide: _hide,
-                    onDelete: _delete,
-                  ),
-              ],
-            ),
-          ),
-        ],
+Future<void> _hide(BuildContext context, AdminCatalogSnapshot snapshot, House house, bool hidden) async {
+  final title = house.title.trim().isEmpty ? '（無題）' : house.title.trim();
+  final verb = hidden ? '公開ページから外します' : '公開ページに戻します';
+  final ok = await askConfirm(context, '「$title」を$verbか？');
+  if (!ok) return;
+  try {
+    await snapshot.repo.setHouseHidden(house.id, hidden);
+    if (!context.mounted) return;
+    final catalog = snapshot.catalog;
+    if (catalog == null) return;
+    snapshot.replace(
+      AdminCatalog(
+        houses: catalog.houses.map((item) => item.id == house.id ? item.copyWith(hidden: hidden) : item).toList(),
+        landlords: catalog.landlords,
+        sources: catalog.sources,
+        status: catalog.status,
       ),
     );
+  } catch (error) {
+    if (!context.mounted) return;
+    ToastScope.of(context).show(firebaseErrorText(error, fallback: '更新に失敗しました。'), ToastKind.error);
+  }
+}
+
+Future<void> _delete(BuildContext context, AdminCatalogSnapshot snapshot, House house) async {
+  final title = house.title.trim().isEmpty ? '（無題）' : house.title.trim();
+  final ok = await askConfirm(context, '「$title」を削除しますか？');
+  if (!ok) return;
+  try {
+    await snapshot.repo.deleteManualHouse(house.id);
+    if (!context.mounted) return;
+    final catalog = snapshot.catalog;
+    if (catalog == null) return;
+    snapshot.replace(
+      AdminCatalog(
+        houses: catalog.houses.where((item) => item.id != house.id).toList(),
+        landlords: catalog.landlords,
+        sources: catalog.sources,
+        status: catalog.status,
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ToastScope.of(context).show(firebaseErrorText(error, fallback: '削除に失敗しました。'), ToastKind.error);
   }
 }
 

@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ooya_direct/data/house_map.dart';
+import 'package:ooya_direct/logic/auth_messages.dart';
 import 'package:ooya_direct/logic/house.dart';
 
 const _keepDate = Object();

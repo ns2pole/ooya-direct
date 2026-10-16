@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../logic/house.dart';
+import 'house_map.dart';
 
 const functionsRegion = 'asia-northeast1';
 

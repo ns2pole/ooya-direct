@@ -35,8 +35,8 @@ class HouseTextFields {
   final HousePropertyFields fields;
 }
 
-class HousePhotoStore {
-  HousePhotoStore({
+class HouseEditor {
+  HouseEditor({
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
     HouseRepository? houses,

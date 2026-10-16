@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../address/geolonia.dart';
-import '../data/house_photos.dart';
+import '../data/admin_repository.dart';
+import '../data/house_editor.dart';
+import '../data/house_map.dart';
 import '../data/house_repository.dart';
 import '../firebase/firebase_env.dart';
 import '../logic/house.dart';
@@ -14,9 +16,9 @@ import '../state/app_state.dart';
 import '../state/scope.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
-import '../widgets/address_suggest_field.dart';
-import '../widgets/app_image.dart';
 import '../widgets/bind_chrome.dart';
+import '../widgets/house_address_fields.dart';
+import '../widgets/house_form_photos.dart';
 import '../widgets/house_property_form_fields.dart';
 import '../widgets/ui.dart';
 
@@ -43,14 +45,14 @@ class HouseFormPage extends StatefulWidget {
 class _HouseFormPageState extends State<HouseFormPage> {
   final _addresses = GeoloniaClient();
   HouseRepository? _houses;
-  HousePhotoStore? _photos;
+  HouseEditor? _editor;
 
   HouseRepository get _houseRepo => _houses ??= HouseRepository();
-  HousePhotoStore get _photoStore => _photos ??= HousePhotoStore();
+  HouseEditor get _houseEditor => _editor ??= HouseEditor();
   final _title = TextEditingController();
   final _description = TextEditingController();
 
-  List<({String id, String name})> _landlords = const [];
+  List<BoardLandlord> _landlords = const [];
   bool _landlordsLoading = false;
   String _landlordId = '';
   String _prefecture = '';
@@ -72,7 +74,6 @@ class _HouseFormPageState extends State<HouseFormPage> {
   bool _loadingTowns = false;
   String? _addressError;
   final _towns = <String, List<String>>{};
-  AuthController? _auth;
   bool _loadStarted = false;
 
   @override
@@ -88,17 +89,7 @@ class _HouseFormPageState extends State<HouseFormPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final auth = AuthScope.of(context);
-    if (!identical(_auth, auth)) {
-      _auth?.removeListener(_onAuth);
-      _auth = auth;
-      auth.addListener(_onAuth);
-    }
-    _onAuth();
-  }
-
-  void _onAuth() {
-    final auth = _auth;
-    if (auth == null || auth.loading || _loadStarted) return;
+    if (auth.loading || _loadStarted) return;
     _loadStarted = true;
     _loadLandlords();
     _loadHouse();
@@ -106,7 +97,6 @@ class _HouseFormPageState extends State<HouseFormPage> {
 
   @override
   void dispose() {
-    _auth?.removeListener(_onAuth);
     _title.dispose();
     _description.dispose();
     _addresses.close();
@@ -142,7 +132,9 @@ class _HouseFormPageState extends State<HouseFormPage> {
       final catalog = await _houseRepo.listLandlords(user.uid);
       if (!mounted) return;
       setState(() {
-        _landlords = catalog;
+        _landlords = [
+          for (final item in catalog) BoardLandlord(id: item.id, name: item.name),
+        ];
         if (!_landlords.any((item) => item.id == _landlordId)) {
           _landlordId = _landlords.length == 1 ? _landlords.first.id : '';
         }
@@ -364,10 +356,10 @@ class _HouseFormPageState extends State<HouseFormPage> {
 
     try {
       if (widget.isNew) {
-        final id = await _photoStore.createHouse(ownerId: user.uid, landlordId: _landlordId, text: _text);
+        final id = await _houseEditor.createHouse(ownerId: user.uid, landlordId: _landlordId, text: _text);
         var saved = const <HousePhoto>[];
         if (photoChanged) {
-          saved = await _photoStore.saveHouseWithPhotos(
+          saved = await _houseEditor.saveHouseWithPhotos(
             houseId: id,
             ownerId: user.uid,
             text: _text,
@@ -395,7 +387,7 @@ class _HouseFormPageState extends State<HouseFormPage> {
         context.go('/landlord/houses/$id/edit', extra: photosSaved ? saved : null);
       } else {
         final houseId = widget.houseId!;
-        final saved = await _photoStore.saveHouseWithPhotos(
+        final saved = await _houseEditor.saveHouseWithPhotos(
           houseId: houseId,
           ownerId: user.uid,
           text: _text,
@@ -499,7 +491,6 @@ class _HouseFormPageState extends State<HouseFormPage> {
     }
 
     final active = _activeExisting;
-    final total = active.length + _pending.length;
     return BindChrome(
       crumbs: crumbs,
       child: Panel(
@@ -544,7 +535,31 @@ class _HouseFormPageState extends State<HouseFormPage> {
                 ),
                 if (_addressError != null)
                   MutedText('住所候補の取得に失敗しました: $_addressError（手入力のまま保存できます）', small: true),
-                _addressRow(),
+                HouseAddressFields(
+                  prefecture: _prefecture,
+                  city: _city,
+                  town: _town,
+                  prefectures: _prefList,
+                  cities: _cityList,
+                  towns: _townList,
+                  loadingPrefectures: _loadingPrefs,
+                  loadingTowns: _loadingTowns,
+                  onPrefecture: (next) {
+                    setState(() {
+                      _prefecture = next;
+                      _city = '';
+                      _town = '';
+                    });
+                  },
+                  onCity: (next) {
+                    setState(() {
+                      _city = next;
+                      _town = '';
+                    });
+                    _ensureTowns();
+                  },
+                  onTown: (next) => setState(() => _town = next),
+                ),
                 if (_prefecture.isNotEmpty && _city.isNotEmpty && _townList.isEmpty && !_loadingTowns)
                   const MutedText('この市区町村には町字データがありません。町名は直接入力してください。', small: true),
                 HousePropertyFormFields(
@@ -552,7 +567,20 @@ class _HouseFormPageState extends State<HouseFormPage> {
                   resetToken: _fieldsToken,
                   onChanged: (next) => setState(() => _fields = next),
                 ),
-                _photoSection(active, total),
+                HouseFormPhotos(
+                  existing: active,
+                  pendingBytes: [for (final file in _pending) file.bytes],
+                  saving: _saving,
+                  onPick: _pickPhotos,
+                  onRemoveExisting: (id) {
+                    setState(() => _removed.add(id));
+                    _resetStatus();
+                  },
+                  onRemovePending: (index) {
+                    setState(() => _pending.removeAt(index));
+                    _resetStatus();
+                  },
+                ),
                 if (_saveStatus != _SaveStatus.idle) _statusBox(),
                 if (_formError != null) ErrorText(_formError!),
                 Wrap(
@@ -567,186 +595,6 @@ class _HouseFormPageState extends State<HouseFormPage> {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _addressRow() {
-    final fields = [
-      AddressSuggestField(
-        label: '都道府県',
-        value: _prefecture,
-        options: _prefList,
-        loading: _loadingPrefs,
-        placeholder: '例: 東京都',
-        onChanged: (next) {
-          setState(() {
-            _prefecture = next;
-            _city = '';
-            _town = '';
-          });
-        },
-      ),
-      AddressSuggestField(
-        label: '市区町村',
-        value: _city,
-        options: _cityList,
-        enabled: _prefecture.isNotEmpty,
-        placeholder: _prefecture.isEmpty ? '先に都道府県' : '例: 新宿区',
-        onChanged: (next) {
-          setState(() {
-            _city = next;
-            _town = '';
-          });
-          _ensureTowns();
-        },
-      ),
-      AddressSuggestField(
-        label: '町名（大字・丁目など）',
-        value: _town,
-        options: _townList,
-        enabled: _prefecture.isNotEmpty && _city.isNotEmpty,
-        loading: _loadingTowns,
-        placeholder: _city.isEmpty ? '先に市区町村' : '候補から選ぶか入力',
-        onChanged: (next) => setState(() => _town = next),
-      ),
-    ];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < fields.length; i++) ...[
-          if (i > 0) const SizedBox(width: 12),
-          Expanded(child: fields[i]),
-        ],
-      ],
-    );
-  }
-
-  Widget _photoSection(List<HousePhoto> active, int total) {
-    final pendingCount = _pending.length;
-    final countNote = total == 0
-        ? ''
-        : ' 登録済み ${active.length} 枚${pendingCount > 0 ? ' + 追加予定 $pendingCount 枚' : ''}';
-    return LabeledField(
-      label: '写真（任意・各 5MB 以下・最大 $maxHousePhotos 枚）',
-      child: VStack(
-        gap: 8,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: AppButton(
-              label: '写真ファイルを選ぶ',
-              ghost: true,
-              onPressed: total >= maxHousePhotos || _saving ? null : _pickPhotos,
-            ),
-          ),
-          Text.rich(
-            TextSpan(
-              style: appText(fontSize: 14, color: AppColors.muted),
-              children: [
-                const TextSpan(text: 'ファイルを選ぶと下にプレビューが増えます（「新規」バッジ付き）。'),
-                TextSpan(
-                  text: ' 追加・削除は「保存」ボタンを押すまで確定しません。',
-                  style: appText(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.muted),
-                ),
-                TextSpan(text: '保存後、詳細ページで最大 3 枚ずつ一覧表示されます。$countNote'),
-              ],
-            ),
-          ),
-          if (pendingCount > 0)
-            SuccessText('追加予定 $pendingCount 枚があります。「保存」を押してください。'),
-          if (total > 0)
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final photo in active) _existingTile(photo),
-                for (var i = 0; i < _pending.length; i++) _pendingTile(i),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _existingTile(HousePhoto photo) {
-    return _photoTile(
-      child: AppNetworkImage(url: photo.url),
-      badge: null,
-      onRemove: () {
-        setState(() => _removed.add(photo.id));
-        _resetStatus();
-      },
-    );
-  }
-
-  Widget _pendingTile(int index) {
-    final file = _pending[index];
-    return _photoTile(
-      child: Image.memory(file.bytes, fit: BoxFit.cover),
-      badge: '新規',
-      onRemove: () {
-        setState(() => _pending.removeAt(index));
-        _resetStatus();
-      },
-    );
-  }
-
-  Widget _photoTile({required Widget child, required String? badge, required VoidCallback onRemove}) {
-    return SizedBox(
-      width: 140,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.photo,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Column(
-            children: [
-              SizedBox(
-                width: 140,
-                height: 100,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    child,
-                    if (badge != null)
-                      Positioned(
-                        top: 5.6,
-                        left: 5.6,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6.4, vertical: 1.6),
-                            child: Text(badge, style: appText(fontSize: 11.2, color: Colors.white, height: 1.4)),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: onRemove,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    backgroundColor: AppColors.surface,
-                    shape: const RoundedRectangleBorder(),
-                    padding: const EdgeInsets.symmetric(vertical: 5.6),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text('削除', style: appText(fontSize: 12.8, color: AppColors.danger)),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

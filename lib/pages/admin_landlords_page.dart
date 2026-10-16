@@ -2,75 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/admin_repository.dart';
-import '../firebase/firebase_env.dart';
-import '../state/app_state.dart';
-import '../state/scope.dart';
 import '../theme/app_text.dart';
 import '../widgets/admin_table.dart';
 import '../widgets/bind_chrome.dart';
 import '../widgets/ui.dart';
+import 'admin_catalog.dart';
 
-class AdminLandlordsPage extends StatefulWidget {
+class AdminLandlordsPage extends StatelessWidget {
   const AdminLandlordsPage({super.key});
 
   @override
-  State<AdminLandlordsPage> createState() => _AdminLandlordsPageState();
-}
-
-class _AdminLandlordsPageState extends State<AdminLandlordsPage> {
-  final _repo = AdminRepository();
-  AdminCatalog? _catalog;
-  bool _loading = true;
-  String? _error;
-  AdminRefresh? _refresh;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final refresh = RefreshScope.of(context);
-    if (!identical(_refresh, refresh)) {
-      _refresh?.removeListener(_reload);
-      _refresh = refresh;
-      refresh.addListener(_reload);
-      _reload();
-    }
-  }
-
-  @override
-  void dispose() {
-    _refresh?.removeListener(_reload);
-    super.dispose();
-  }
-
-  Future<void> _reload() async {
-    final user = AuthScope.of(context).user;
-    if (user == null) return;
-    try {
-      final catalog = await _repo.load(user.uid);
-      if (!mounted) return;
-      setState(() {
-        _catalog = catalog;
-        _loading = false;
-        _error = null;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = firebaseErrorText(error, fallback: '一覧の取得に失敗しました。');
-        _loading = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_loading) return const BindChrome(child: Panel(child: Text('読み込み中…')));
-    final catalog = _catalog;
+    return AdminCatalogHost(
+      builder: (context, snapshot) {
+        if (snapshot.loading) return const BindChrome(child: Panel(child: Text('読み込み中…')));
+        return _body(context, snapshot);
+      },
+    );
+  }
+
+  Widget _body(BuildContext context, AdminCatalogSnapshot snapshot) {
+    final catalog = snapshot.catalog;
     return BindChrome(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_error != null) ...[ErrorText(_error!), const SizedBox(height: 12)],
+          if (snapshot.error != null) ...[ErrorText(snapshot.error!), const SizedBox(height: 12)],
           Panel(
             child: VStack(
               children: [

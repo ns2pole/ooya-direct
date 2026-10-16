@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/admin_repository.dart';
 import '../firebase/firebase_env.dart';
-import '../logic/house.dart';
+import '../logic/portal_label.dart';
 import '../state/app_state.dart';
 import '../state/scope.dart';
 import '../theme/app_text.dart';
@@ -30,7 +30,6 @@ class _LandlordFormPageState extends State<LandlordFormPage> {
   bool _loading = false;
   String? _error;
   String? _missing;
-  AuthController? _auth;
   bool _loadStarted = false;
 
   @override
@@ -43,24 +42,13 @@ class _LandlordFormPageState extends State<LandlordFormPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final auth = AuthScope.of(context);
-    if (!identical(_auth, auth)) {
-      _auth?.removeListener(_onAuth);
-      _auth = auth;
-      auth.addListener(_onAuth);
-    }
-    _onAuth();
-  }
-
-  void _onAuth() {
-    final auth = _auth;
-    if (widget.isNew || auth == null || auth.loading || auth.user == null || _loadStarted) return;
+    if (widget.isNew || auth.loading || auth.user == null || _loadStarted) return;
     _loadStarted = true;
     _load();
   }
 
   @override
   void dispose() {
-    _auth?.removeListener(_onAuth);
     _name.dispose();
     _url.dispose();
     super.dispose();

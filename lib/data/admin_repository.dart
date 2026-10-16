@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../data/house_photos.dart';
+import '../data/house_editor.dart';
+import '../data/house_map.dart';
 import '../data/house_repository.dart';
 import '../logic/house.dart';
 
@@ -129,7 +130,7 @@ class AdminRepository {
   }
 
   Future<void> deleteManualHouse(String houseId) async {
-    await HousePhotoStore(firestore: _firestore).deleteAllHousePhotos(houseId);
+    await HouseEditor(firestore: _firestore).deleteAllHousePhotos(houseId);
     await _firestore.collection('houses').doc(houseId).delete();
   }
 
