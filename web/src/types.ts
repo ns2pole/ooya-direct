@@ -43,6 +43,14 @@ export type House = {
   buildingAge: string;
   /** 参考リンク（外部 URL。未設定は空文字） */
   referenceUrl: string;
+  /** 管理画面の大家。未設定は空文字 */
+  landlordId: string;
+  /** 取り込みURL。手動物件は空文字 */
+  sourceId: string;
+  /** 同期で入った物件 */
+  fromSync: boolean;
+  /** 公開ページから外している */
+  hidden: boolean;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };

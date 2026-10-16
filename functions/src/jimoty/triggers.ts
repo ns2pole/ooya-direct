@@ -9,18 +9,12 @@ const TASK_NAME = "runJimotySyncTask";
 
 function syncError(err: unknown): HttpsError {
   const message = err instanceof Error ? err.message : "同期に失敗しました。";
-  if (message.startsWith("同期中です")) {
-    return new HttpsError("failed-precondition", message);
-  }
-  if (message.startsWith("同期先の大家アカウント")) {
-    return new HttpsError("failed-precondition", message);
-  }
-  return new HttpsError("internal", message);
+  return new HttpsError("failed-precondition", message);
 }
 
 /** 管理画面からその場で同期する。 */
 export const syncJimotyNow = onCall(
-  { region: REGION, cors: true, invoker: "public", timeoutSeconds: 120 },
+  { region: REGION, cors: true, invoker: "public", timeoutSeconds: 300 },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "ログインが必要です。");
@@ -80,7 +74,7 @@ export const enqueueJimotySync = onSchedule(
 export const runJimotySyncTask = onTaskDispatched(
   {
     region: REGION,
-    timeoutSeconds: 120,
+    timeoutSeconds: 300,
     retryConfig: { maxAttempts: 3, minBackoffSeconds: 60 },
     rateLimits: { maxConcurrentDispatches: 1 },
   },

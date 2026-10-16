@@ -68,6 +68,14 @@ export function HouseDetailPage() {
 
         const houseData = houseSnap.data() as Record<string, unknown>;
         const h = mapHouse(houseSnap.id, houseData);
+        if (h.hidden) {
+          if (!cancelled) {
+            setHouse(null);
+            setPhotos([]);
+            setInquiries([]);
+          }
+          return;
+        }
         const photoList = await loadHousePhotosForDisplay(houseId, houseData);
         const iq = query(
           collection(getDb(), 'houses', houseId, 'inquiries'),

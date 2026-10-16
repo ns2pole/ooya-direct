@@ -67,21 +67,24 @@ npm run dev
 | `unlinkLine` | Callable | LINE 連携解除（要ログイン） |
 | `lineWebhook` | HTTP | LINE からの Webhook（連携コード受付） |
 | `onInquiryCreated` | Firestore トリガー | 問い合わせ作成時に LINE Push 通知 |
-| `syncJimotyNow` | Callable | 管理画面からジモティーの未成約物件を取り込む（要ログイン） |
+| `syncJimotyNow` | Callable | 管理画面から、登録したURLの未成約物件を取り込む（要ログイン） |
 | `enqueueJimotySync` | スケジュール | 毎日 23:00（日本時間）に、0〜59分後の同期を1回予約 |
-| `runJimotySyncTask` | Cloud Tasks | 予約時刻に未成約物件を取り込む |
+| `runJimotySyncTask` | Cloud Tasks | 予約時刻に、登録したURLをすべて取り込む |
+| `registerPortalSource` | Callable | 大家の下にポータルとURLを登録する（要ログイン） |
+| `deletePortalSource` | Callable | URLと、そのURLから入った物件を削除する（要ログイン） |
+| `deleteLandlord` | Callable | 大家と、そのURL・物件を削除する（要ログイン） |
 
 ```bash
 cd functions && npm install && npm run build
 cd .. && firebase deploy --only functions,firestore:rules
 ```
 
-ジモティーの [ミッチーさんのプロフィール](https://jmty.jp/profiles/62282557f0a7ee2c83f440bf) から、成約バッジの無い不動産だけを `houses` に登録します。ドキュメント ID は `jmty-` + 記事 ID です。参考リンクに掲載 URL を入れます。
+管理画面で大家を作り、その下にジモティーのプロフィールURLを登録すると、成約バッジの無い不動産だけを `houses` に登録します。ドキュメント ID は `jmty-` + 記事 ID です。参考リンクに掲載 URL を入れます。
 
-- 同じ記事は、タイトル・家賃・概要・住所・間取りなどが変わったときだけ上書きします。`createdAt` と、大家がアップロードした代表画像は残します。
-- 一覧に無くなった、または成約バッジが付いた取り込み物件だけ削除します。その物件の問い合わせも一緒に消えます。手入力の物件（ID が `jmty-` で始まらないもの）は触りません。
-- 管理画面（ログイン後の「マイ物件」）の **ジモティーから同期** で、その場でも取り込めます。同期先の `ownerId` は押したアカウントです。
-- 初回の自動同期は、大家アカウントが1人ならその UID、それ以外は管理画面で一度同期したアカウントを使います。
+- 同じ記事は、タイトル・家賃・概要・住所・間取りなどが変わったときだけ上書きします。`createdAt` と、大家がアップロードした代表画像は残します。非表示にした物件は上書きせず、公開ページにも出しません。
+- そのURLの一覧に無くなった、または成約バッジが付いた取り込み物件だけ削除します。その物件の問い合わせも一緒に消えます。他のURLの物件と、手入力の物件は残します。
+- 管理画面（ログイン後の「マイ物件」）の **同期** で、登録したURLをその場でも取り込めます。URLが無いときは同期しません。
+- 毎日 23:00〜23:59 に、登録したURLをすべて1回同期します。
 
 ## LINE 通知（あなたがやること）
 

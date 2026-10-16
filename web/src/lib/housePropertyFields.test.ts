@@ -29,6 +29,10 @@ function mockHouse(overrides: Partial<House> = {}): House {
     floorArea: '45㎡',
     floors: '3階建 / 2階',
     buildingAge: '築15年',
+    landlordId: '',
+    sourceId: '',
+    fromSync: false,
+    hidden: false,
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 import type { SinglePrefecture } from '@geolonia/japanese-addresses-v2';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   findPrefecture,
   getCityNamesForPrefecture,
@@ -48,6 +48,10 @@ export function HouseFormPage() {
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
 
+  const [searchParams] = useSearchParams();
+  const [landlords, setLandlords] = useState<{ id: string; name: string }[]>([]);
+  const [landlordsLoading, setLandlordsLoading] = useState(isNew);
+  const [landlordId, setLandlordId] = useState(searchParams.get('landlord') ?? '');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prefecture, setPrefecture] = useState('');
@@ -89,6 +93,36 @@ export function HouseFormPage() {
 
   const townKey = prefecture && city ? `${prefecture}\t${city}` : '';
   const townList = townKey ? (townCache[townKey] ?? []) : [];
+
+  useEffect(() => {
+    if (!isNew || !isFirebaseConfigured || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(getDb(), 'landlords'), where('ownerId', '==', user.uid))
+        );
+        const list: { id: string; name: string }[] = [];
+        snap.forEach((docSnap) => {
+          const data = docSnap.data() as Record<string, unknown>;
+          list.push({ id: docSnap.id, name: String(data.name ?? '') });
+        });
+        list.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+        if (!cancelled) {
+          setLandlords(list);
+          setLandlordId((current) => {
+            if (current && list.some((item) => item.id === current)) return current;
+            return list.length === 1 ? list[0].id : '';
+          });
+        }
+      } finally {
+        if (!cancelled) setLandlordsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isNew, user]);
 
   function pendingSources(): { file: File; previewUrl: string }[] {
     if (pendingPhotosRef.current.length >= pendingPhotos.length) {
@@ -217,6 +251,10 @@ export function HouseFormPage() {
           if (!cancelled) setLoadError('この物件を編集する権限がありません。');
           return;
         }
+        if (data.fromSync === true) {
+          if (!cancelled) setLoadError('同期で取り込んだ物件は編集できません。');
+          return;
+        }
         const photos = await loadHousePhotosForDisplay(houseId, data);
         const navPhotos = navPhotosRef.current;
         const displayPhotos = navPhotos?.length ? navPhotos : photos;
@@ -343,6 +381,11 @@ export function HouseFormPage() {
       return;
     }
 
+    if (isNew && !landlordId) {
+      showValidationError('大家を選択してください。');
+      return;
+    }
+
     if (!isFirebaseConfigured) {
       showValidationError('Firebase が未設定です。環境変数を確認してください。');
       return;
@@ -362,6 +405,10 @@ export function HouseFormPage() {
       if (isNew) {
         const ref = await addDoc(collection(getDb(), 'houses'), {
           ownerId: user.uid,
+          landlordId,
+          sourceId: '',
+          fromSync: false,
+          hidden: false,
           title: title.trim(),
           description: description.trim(),
           prefecture: prefecture.trim(),
@@ -484,6 +531,23 @@ export function HouseFormPage() {
     );
   }
 
+  if (isNew && landlordsLoading) {
+    return (
+      <section className="panel">
+        <p>読み込み中…</p>
+      </section>
+    );
+  }
+
+  if (isNew && landlords.length === 0) {
+    return (
+      <section className="panel stack">
+        <p>先に大家を登録してください。</p>
+        <Link to="/landlord">マイ物件へ</Link>
+      </section>
+    );
+  }
+
   return (
     <section className="panel stack-lg">
       <form
@@ -492,6 +556,23 @@ export function HouseFormPage() {
         onInvalid={onFormInvalid}
         noValidate={false}
       >
+        {isNew ? (
+          <label className="field">
+            <span>大家</span>
+            <select
+              value={landlordId}
+              onChange={(event) => setLandlordId(event.target.value)}
+              required
+            >
+              <option value="">選択してください</option>
+              {landlords.map((landlord) => (
+                <option key={landlord.id} value={landlord.id}>
+                  {landlord.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="field">
           <span>タイトル</span>
           <textarea

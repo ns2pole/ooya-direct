@@ -8,6 +8,7 @@ import { onInquiryCreated } from "./inquiryNotify";
 admin.initializeApp();
 
 export { syncJimotyNow, enqueueJimotySync, runJimotySyncTask } from "./jimoty/triggers";
+export { registerPortalSource, deletePortalSource, deleteLandlord } from "./portals/callables";
 
 const REGION = "asia-northeast1";
 const MAX_MESSAGE = 2000;
@@ -47,7 +48,7 @@ export const submitInquiry = onCall(
     const db = admin.firestore();
     const houseRef = db.collection("houses").doc(houseId);
     const houseSnap = await houseRef.get();
-    if (!houseSnap.exists) {
+    if (!houseSnap.exists || houseSnap.get("hidden") === true) {
       throw new HttpsError("not-found", "物件が見つかりません。");
     }
 

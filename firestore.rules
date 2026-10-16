@@ -42,7 +42,8 @@ service cloud.firestore {
           'prefecture', 'city', 'town',
           'rent', 'managementFee', 'genre', 'depositKeyMoney',
           'areaSize', 'floorArea', 'floors', 'buildingAge',
-          'referenceUrl'
+          'referenceUrl',
+          'landlordId', 'sourceId', 'fromSync', 'hidden'
         ])
         && request.resource.data.prefecture is string
         && request.resource.data.prefecture.size() <= 30
@@ -70,7 +71,25 @@ service cloud.firestore {
         && request.resource.data.referenceUrl.size() <= 2048
         && validCoverPhotoUrl()
         && validLegacyPhotoUrl()
-        && validLegacyPhotoUrls();
+        && validLegacyPhotoUrls()
+        && (!('landlordId' in request.resource.data)
+          || (request.resource.data.landlordId is string
+            && request.resource.data.landlordId.size() <= 128))
+        && (!('sourceId' in request.resource.data)
+          || (request.resource.data.sourceId is string
+            && request.resource.data.sourceId.size() <= 128))
+        && (!('fromSync' in request.resource.data)
+          || request.resource.data.fromSync is bool)
+        && (!('hidden' in request.resource.data)
+          || request.resource.data.hidden is bool);
+    }
+
+    function manualHouseCreate() {
+      return request.resource.data.landlordId is string
+        && request.resource.data.landlordId.size() > 0
+        && request.resource.data.sourceId == ''
+        && request.resource.data.fromSync == false
+        && request.resource.data.hidden == false;
     }
 
     function validPhotoDoc() {
@@ -97,12 +116,18 @@ service cloud.firestore {
 
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
-        && validHouseFields();
+        && validHouseFields()
+        && manualHouseCreate();
 
       allow update: if request.auth != null
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
-        && validHouseFields();
+        && validHouseFields()
+        && (
+          resource.data.fromSync == true
+            ? request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden', 'updatedAt'])
+            : request.resource.data.fromSync != true
+        );
 
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;
@@ -123,6 +148,32 @@ service cloud.firestore {
         allow read: if true;
         allow create, update, delete: if false;
       }
+    }
+
+    match /landlords/{landlordId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['name', 'ownerId', 'createdAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80;
+
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    match /portalSources/{sourceId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     match /settings/{docId} {

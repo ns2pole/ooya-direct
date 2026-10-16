@@ -19,6 +19,10 @@ function mockHouse(id: string, title: string): House {
     ...EMPTY_HOUSE_PROPERTY_FIELDS,
     rent: '6万円',
     areaSize: '3LDK',
+    landlordId: '',
+    sourceId: '',
+    fromSync: false,
+    hidden: false,
     createdAt: null,
     updatedAt: null,
   };

@@ -27,6 +27,10 @@ export function mapHouse(id: string, data: Record<string, unknown>): House {
     city: String(data.city ?? ''),
     town: String(data.town ?? ''),
     ...readHousePropertyFields(data),
+    landlordId: String(data.landlordId ?? ''),
+    sourceId: String(data.sourceId ?? ''),
+    fromSync: data.fromSync === true,
+    hidden: data.hidden === true,
     createdAt: (data.createdAt as House['createdAt']) ?? null,
     updatedAt: (data.updatedAt as House['updatedAt']) ?? null,
   };

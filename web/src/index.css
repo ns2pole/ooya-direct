@@ -738,6 +738,37 @@ code {
   list-style: none;
 }
 
+.landlord-row--hidden {
+  opacity: 0.55;
+}
+
+.landlord-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.landlord-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.landlord-group h2,
+.landlord-group h3 {
+  margin: 0;
+}
+
+.portal-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .inquiry-list {
   list-style: none;
   padding: 0;

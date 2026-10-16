@@ -26,7 +26,7 @@ export function HomePage() {
           list.push(mapHouse(docSnap.id, docSnap.data() as Record<string, unknown>));
         });
         if (!cancelled) {
-          setHouses(list);
+          setHouses(list.filter((house) => !house.hidden));
           setError(null);
         }
       } catch (e) {

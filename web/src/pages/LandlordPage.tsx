@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -8,6 +9,8 @@ import {
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
   type Timestamp,
 } from 'firebase/firestore';
@@ -24,6 +27,8 @@ import { mapHouse, houseCoverPhoto } from '../lib/mapHouse';
 import { formatDate, formatDateOnly } from '../format';
 import { usePageTitle } from '../context/PageTitleContext';
 import { lineAddFriendUrl } from '../lib/lineConfig';
+import { LandlordBoard } from '../components/LandlordBoard';
+import type { BoardHouse, BoardLandlord, BoardSource } from '../lib/landlordBoard';
 
 function mapLandlordProfile(data: Record<string, unknown>): LandlordProfile {
   const lineUserId = data.lineUserId;
@@ -85,6 +90,8 @@ export function LandlordPage() {
   const { showToast } = useToast();
   usePageTitle(user ? 'マイ物件' : '大家さん');
   const [houses, setHouses] = useState<House[]>([]);
+  const [landlords, setLandlords] = useState<BoardLandlord[]>([]);
+  const [sources, setSources] = useState<BoardSource[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listVersion, setListVersion] = useState(0);
@@ -135,6 +142,8 @@ export function LandlordPage() {
   useEffect(() => {
     if (!isFirebaseConfigured || !user) {
       setHouses([]);
+      setLandlords([]);
+      setSources([]);
       return;
     }
 
@@ -142,18 +151,42 @@ export function LandlordPage() {
     (async () => {
       setListLoading(true);
       try {
-        const q = query(
-          collection(getDb(), 'houses'),
-          where('ownerId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const snap = await getDocs(q);
+        const db = getDb();
+        const [houseSnap, landlordSnap, sourceSnap] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, 'houses'),
+              where('ownerId', '==', user.uid),
+              orderBy('createdAt', 'desc')
+            )
+          ),
+          getDocs(query(collection(db, 'landlords'), where('ownerId', '==', user.uid))),
+          getDocs(query(collection(db, 'portalSources'), where('ownerId', '==', user.uid))),
+        ]);
         const list: House[] = [];
-        snap.forEach((d) => {
+        houseSnap.forEach((d) => {
           list.push(mapHouse(d.id, d.data() as Record<string, unknown>));
+        });
+        const people: BoardLandlord[] = [];
+        landlordSnap.forEach((d) => {
+          const data = d.data() as Record<string, unknown>;
+          people.push({ id: d.id, name: String(data.name ?? '') });
+        });
+        people.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+        const urls: BoardSource[] = [];
+        sourceSnap.forEach((d) => {
+          const data = d.data() as Record<string, unknown>;
+          urls.push({
+            id: d.id,
+            landlordId: String(data.landlordId ?? ''),
+            portal: String(data.portal ?? ''),
+            url: String(data.url ?? ''),
+          });
         });
         if (!cancelled) {
           setHouses(list);
+          setLandlords(people);
+          setSources(urls);
           setListError(null);
         }
       } catch (e) {
@@ -242,12 +275,90 @@ export function LandlordPage() {
     }
   }
 
-  async function onDelete(h: House) {
-    if (!user || h.ownerId !== user.uid) return;
-    if (!window.confirm(`「${h.title || '無題'}」を削除しますか？`)) return;
-    await deleteAllHousePhotos(h.id);
-    await deleteDoc(doc(getDb(), 'houses', h.id));
-    setHouses((prev) => prev.filter((x) => x.id !== h.id));
+  async function onDeleteManualHouse(house: BoardHouse) {
+    if (!user) return;
+    await deleteAllHousePhotos(house.id);
+    await deleteDoc(doc(getDb(), 'houses', house.id));
+    setHouses((prev) => prev.filter((item) => item.id !== house.id));
+  }
+
+  async function onHideHouse(houseId: string, hidden: boolean) {
+    try {
+      await updateDoc(doc(getDb(), 'houses', houseId), {
+        hidden,
+        updatedAt: serverTimestamp(),
+      });
+      setHouses((prev) => prev.map((item) => (item.id === houseId ? { ...item, hidden } : item)));
+    } catch (err) {
+      const message = err instanceof FirebaseError ? err.message : '更新に失敗しました。';
+      showToast(message, 'error');
+    }
+  }
+
+  async function onAddLandlord(name: string) {
+    if (!user) return;
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('名前を入力してください。');
+    await addDoc(collection(getDb(), 'landlords'), {
+      name: trimmed,
+      ownerId: user.uid,
+      createdAt: serverTimestamp(),
+    });
+    setListVersion((version) => version + 1);
+  }
+
+  async function onRenameLandlord(landlordId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('名前を入力してください。');
+    await updateDoc(doc(getDb(), 'landlords', landlordId), {
+      name: trimmed,
+      updatedAt: serverTimestamp(),
+    });
+    setLandlords((prev) =>
+      prev.map((item) => (item.id === landlordId ? { ...item, name: trimmed } : item))
+    );
+  }
+
+  async function onAddSource(landlordId: string, url: string) {
+    const fn = httpsCallable<
+      { landlordId: string; portal: string; url: string },
+      { id: string }
+    >(getFns(), 'registerPortalSource');
+    await fn({ landlordId, portal: 'jimoty', url });
+    setListVersion((version) => version + 1);
+  }
+
+  async function onDeleteSource(sourceId: string) {
+    const fn = httpsCallable<{ sourceId: string }, { removed: number }>(
+      getFns(),
+      'deletePortalSource'
+    );
+    await fn({ sourceId });
+    setListVersion((version) => version + 1);
+  }
+
+  async function onDeleteLandlord(landlordId: string) {
+    const fn = httpsCallable<{ landlordId: string }, { removedHouses: number }>(
+      getFns(),
+      'deleteLandlord'
+    );
+    await fn({ landlordId });
+    setListVersion((version) => version + 1);
+  }
+
+  function boardHouse(house: House): BoardHouse {
+    return {
+      id: house.id,
+      title: house.title,
+      landlordId: house.landlordId,
+      sourceId: house.sourceId,
+      fromSync: house.fromSync,
+      hidden: house.hidden,
+      meta: [...housePropertyListChips(house), formatDateOnly(house.updatedAt ?? house.createdAt)]
+        .filter(Boolean)
+        .join(' · '),
+      coverPhotoUrl: houseCoverPhoto(house),
+    };
   }
 
   async function onStartLineLink() {
@@ -354,20 +465,17 @@ export function LandlordPage() {
             type="button"
             className="btn primary"
             onClick={() => void onSyncJimoty()}
-            disabled={syncing}
+            disabled={syncing || sources.length === 0}
           >
-            {syncing ? '同期中…' : 'ジモティーから同期'}
+            {syncing ? '同期中…' : '同期'}
           </button>
-          <Link to="/landlord/houses/new" className="btn primary">
-            新規登録
-          </Link>
           <Link to="/" className="btn ghost">
             物件一覧
           </Link>
         </div>
         <p className="muted small">
-          未成約のジモティー掲載だけを、このアカウントの物件として取り込みます。内容が変わった項目だけ上書きし、成約になった取り込み物件は削除します。毎日
-          23:00〜23:59 にも1回、自動で同期します。
+          登録したURLの未成約だけを取り込みます。内容が変わった項目だけ上書きし、成約になった取り込み物件は削除します。非表示にした物件は同期でも戻りません。毎日
+          23:00〜23:59 にも1回、登録URLをすべて同期します。
         </p>
         {jimotyStatus?.lastSyncedAt ? (
           <p className="muted small">
@@ -438,56 +546,20 @@ export function LandlordPage() {
       {listLoading ? <p>読み込み中…</p> : null}
       {listError ? <p className="text-error">{listError}</p> : null}
 
-      {!listLoading && houses.length === 0 ? (
-        <p className="muted">まだ物件がありません。「新規登録」から追加してください。</p>
-      ) : (
-        <ul className="house-list">
-          {houses.map((h) => {
-            const cover = houseCoverPhoto(h);
-            return (
-            <li key={h.id} className="landlord-row">
-              <div className="landlord-row-head">
-                <div className="landlord-row-text">
-                  <strong>{h.title || '（無題）'}</strong>
-                  <div className="muted landlord-row-meta">
-                    {[
-                      ...housePropertyListChips(h),
-                      formatDateOnly(h.updatedAt ?? h.createdAt),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </div>
-                </div>
-                {cover ? (
-                  <img
-                    src={cover}
-                    alt=""
-                    className="landlord-thumb"
-                    width={72}
-                    height={52}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="landlord-thumb landlord-thumb--empty" aria-hidden />
-                )}
-              </div>
-              <div className="row">
-                <Link to={`/houses/${h.id}`} className="btn ghost">
-                  公開ページ
-                </Link>
-                <Link to={`/landlord/houses/${h.id}/edit`} className="btn ghost">
-                  編集
-                </Link>
-                <button type="button" className="btn danger" onClick={() => void onDelete(h)}>
-                  削除
-                </button>
-              </div>
-            </li>
-            );
-          })}
-        </ul>
-      )}
+      {!listLoading ? (
+        <LandlordBoard
+          landlords={landlords}
+          sources={sources}
+          houses={houses.map(boardHouse)}
+          onAddLandlord={onAddLandlord}
+          onRenameLandlord={onRenameLandlord}
+          onAddSource={onAddSource}
+          onDeleteSource={onDeleteSource}
+          onDeleteLandlord={onDeleteLandlord}
+          onHideHouse={onHideHouse}
+          onDeleteManualHouse={onDeleteManualHouse}
+        />
+      ) : null}
     </section>
   );
 }
