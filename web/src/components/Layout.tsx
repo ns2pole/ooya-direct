@@ -9,11 +9,11 @@ import { AdminRefreshProvider } from '../context/AdminRefreshContext';
 import { useAuth } from '../context/AuthContext';
 import { scrollToElementId } from '../lib/scrollToElement';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
-import { AdminNav } from './AdminNav';
+import { AdminNav, AdminSyncButton } from './AdminNav';
 import { HouseDetailBackButton } from './HouseDetailBackButton';
 import { ScrollToTopOnNavigate } from './ScrollToTopOnNavigate';
 
-function HeaderEnd() {
+function HeaderEnd({ placeholder = true }: { placeholder?: boolean }) {
   const crumbs = usePageHeaderValue();
   const endAction = usePageHeaderEndActionValue();
   const listProgress = useListProgressValue();
@@ -62,6 +62,7 @@ function HeaderEnd() {
     );
   }
 
+  if (!placeholder) return null;
   return <div className="app-header-end" aria-hidden="true" />;
 }
 
@@ -78,16 +79,31 @@ export function Layout() {
     <div className="app-shell">
       <ScrollToTopOnNavigate />
       <header className="app-header">
-        <div className="app-header-inner">
-          <div className="app-header-start">
-            {isHouseDetail ? <HouseDetailBackButton /> : null}
+        {user ? (
+          <div className="app-header-bar">
+            <div className="app-header-bar-left">
+              {isHouseDetail ? <HouseDetailBackButton /> : null}
+              <Link to="/" className="brand">
+                {brandLabel}
+              </Link>
+              <AdminSyncButton />
+            </div>
+            <div className="app-header-bar-right">
+              <HeaderEnd placeholder={false} />
+              <AdminNav />
+            </div>
           </div>
-          <Link to="/" className="brand app-header-brand">
-            {brandLabel}
-          </Link>
-          <HeaderEnd />
-        </div>
-        {user ? <AdminNav /> : null}
+        ) : (
+          <div className="app-header-inner">
+            <div className="app-header-start">
+              {isHouseDetail ? <HouseDetailBackButton /> : null}
+            </div>
+            <Link to="/" className="brand app-header-brand">
+              {brandLabel}
+            </Link>
+            <HeaderEnd />
+          </div>
+        )}
       </header>
 
       {!isFirebaseConfigured ? (

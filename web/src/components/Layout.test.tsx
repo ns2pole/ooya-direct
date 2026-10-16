@@ -180,9 +180,15 @@ describe('Layout header breadcrumbs', () => {
       </MemoryRouter>
     );
 
+    const bar = document.querySelector('.app-header-bar');
+    expect(bar?.querySelector('.app-header-bar-left')).toContainElement(screen.getByRole('button', { name: '同期' }));
+    expect(bar?.querySelector('.app-header-bar-left')).toContainElement(screen.getByRole('link', { name: '大家ダイレクト' }));
     const nav = screen.getByRole('navigation', { name: '管理' });
-    expect(nav).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '同期' })).toBeInTheDocument();
+    expect(bar?.querySelector('.app-header-bar-right')).toContainElement(nav);
+    expect(nav).toContainElement(screen.getByRole('link', { name: '物件' }));
+    expect(nav).toContainElement(screen.getByRole('link', { name: '大家' }));
+    expect(nav).toContainElement(screen.getByRole('link', { name: 'LINE通知' }));
+    expect(nav).toContainElement(screen.getByRole('button', { name: 'ログアウト' }));
     expect(screen.getByRole('link', { name: '物件' })).toHaveAttribute('href', '/landlord/houses');
     expect(screen.getByRole('link', { name: '大家' })).toHaveAttribute('href', '/landlord/landlords');
     expect(screen.getByRole('link', { name: 'LINE通知' })).toHaveAttribute('href', '/landlord/line');

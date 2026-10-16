@@ -18,8 +18,7 @@ function syncSummary(status: JimotySyncResult): string {
   return `新規 ${status.created}件、更新 ${status.updated}件、変化なし ${status.unchanged}件、成約のため削除 ${status.removed}件`;
 }
 
-export function AdminNav() {
-  const { signOutUser } = useAuth();
+export function AdminSyncButton() {
   const { showToast } = useToast();
   const { bump } = useAdminRefresh();
   const [syncing, setSyncing] = useState(false);
@@ -41,10 +40,17 @@ export function AdminNav() {
   }
 
   return (
+    <button type="button" className="btn primary" onClick={() => void onSync()} disabled={syncing}>
+      {syncing ? '同期中…' : '同期'}
+    </button>
+  );
+}
+
+export function AdminNav() {
+  const { signOutUser } = useAuth();
+
+  return (
     <nav className="admin-nav" aria-label="管理">
-      <button type="button" className="btn primary" onClick={() => void onSync()} disabled={syncing}>
-        {syncing ? '同期中…' : '同期'}
-      </button>
       <NavLink to="/landlord/houses" className="admin-nav-link">
         物件
       </NavLink>
