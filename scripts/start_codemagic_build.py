@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ID = "ios-ipa-build"
 BRANCH = "main"
 TEAM_ID = "6a0277d4dfd255469450aa46"
-REPOSITORY_URL = "git@github.com:ns2pole/ooya-direct.git"
+REPOSITORY_URL = "https://github.com/ns2pole/ooya-direct"
 
 
 def fail(message: str) -> None:
@@ -92,12 +92,21 @@ def ensure_app(api_token: str) -> str:
     status, body = request(api_token, "GET", "https://api.codemagic.io/apps")
     if status != 200 or not isinstance(body, dict):
         fail(f"アプリ一覧を取得できません ({status})")
+    matches = []
     for app in body.get("applications") or []:
         repo = app.get("repository") or {}
         html = repo.get("htmlUrl") or ""
         if "ooya-direct" in html or app.get("appName") == "ooya-direct":
-            print(f"app exists: {app['_id']}")
-            return app["_id"]
+            matches.append(app)
+    https_apps = [
+        app for app in matches
+        if str((app.get("repository") or {}).get("htmlUrl") or "").startswith("https://")
+    ]
+    chosen = (https_apps or matches)
+    if chosen:
+        app = chosen[0]
+        print(f"app exists: {app['_id']}")
+        return app["_id"]
     status, body = request(
         api_token,
         "POST",
