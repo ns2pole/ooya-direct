@@ -97,6 +97,22 @@ class HouseRepository {
     }).toList();
   }
 
+  Future<HouseRecord?> getHouse(String houseId) async {
+    final snap = await _firestore.collection('houses').doc(houseId).get();
+    if (!snap.exists) return null;
+    final data = snap.data() ?? <String, dynamic>{};
+    return HouseRecord(mapHouse(snap.id, data), data);
+  }
+
+  Future<List<({String id, String name})>> listLandlords(String ownerId) async {
+    final snap = await _firestore.collection('landlords').where('ownerId', isEqualTo: ownerId).get();
+    final list = snap.docs
+        .map((doc) => (id: doc.id, name: '${doc.data()['name'] ?? ''}'))
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return list;
+  }
+
   Future<void> submitInquiry({required String houseId, required String message}) async {
     await _functions.httpsCallable('submitInquiry').call({
       'houseId': houseId,

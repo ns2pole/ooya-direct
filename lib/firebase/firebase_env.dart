@@ -56,4 +56,28 @@ String firebaseErrorText(Object error, {String fallback = '読み込みに失敗
   return fallback;
 }
 
+String messageForHouseFormSaveError(Object error) {
+  final code = error is FirebaseException ? error.code : '';
+  if (code == 'unauthorized' || code == 'storage/unauthorized') {
+    return '画像のアップロードが拒否されました（storage/unauthorized）。'
+        'Firebase Storage のルール・バケット名（FIREBASE_STORAGE_BUCKET）・'
+        '物件の ownerId（ログイン UID と一致）を README の「トラブルシューティング（Storage / Safari）」で確認してください。';
+  }
+  if (code == 'permission-denied') {
+    return '保存が拒否されました（permission-denied）。'
+        'Firestore ルールのデプロイ（firebase deploy --only firestore:rules）を確認してください。'
+        'photos サブコレクションのルールが未反映の可能性があります。';
+  }
+  if (error is FirebaseException) {
+    final message = error.message;
+    if (message != null && message.isNotEmpty) return message;
+  }
+  if (error is Exception) {
+    final text = error.toString();
+    const prefix = 'Exception: ';
+    if (text.startsWith(prefix)) return text.substring(prefix.length);
+  }
+  return '保存に失敗しました。';
+}
+
 bool get isLocalBuild => kDebugMode;

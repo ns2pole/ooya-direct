@@ -11,10 +11,6 @@ functions/lib/
 functions/node_modules/
 functions/.env
 
-# Web (React, until the Flutter screens replace it)
-react_web/dist/
-react_web/node_modules/
-
 # Flutter
 .dart_tool/
 .flutter-plugins

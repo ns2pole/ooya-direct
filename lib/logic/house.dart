@@ -47,6 +47,44 @@ class HousePropertyFields {
         'referenceUrl' => referenceUrl,
         _ => '',
       };
+
+  HousePropertyFields copyWith({
+    String? rent,
+    String? managementFee,
+    String? genre,
+    String? depositKeyMoney,
+    String? areaSize,
+    String? floorArea,
+    String? floors,
+    String? buildingAge,
+    String? referenceUrl,
+  }) {
+    return HousePropertyFields(
+      rent: rent ?? this.rent,
+      managementFee: managementFee ?? this.managementFee,
+      genre: genre ?? this.genre,
+      depositKeyMoney: depositKeyMoney ?? this.depositKeyMoney,
+      areaSize: areaSize ?? this.areaSize,
+      floorArea: floorArea ?? this.floorArea,
+      floors: floors ?? this.floors,
+      buildingAge: buildingAge ?? this.buildingAge,
+      referenceUrl: referenceUrl ?? this.referenceUrl,
+    );
+  }
+
+  Map<String, String> toPayload() {
+    return {
+      'rent': rent.trim(),
+      'managementFee': managementFee.trim(),
+      'genre': genre.trim(),
+      'depositKeyMoney': depositKeyMoney.trim(),
+      'areaSize': areaSize.trim(),
+      'floorArea': floorArea.trim(),
+      'floors': floors.trim(),
+      'buildingAge': buildingAge.trim(),
+      'referenceUrl': referenceUrl.trim(),
+    };
+  }
 }
 
 const areaSizeOptions = [

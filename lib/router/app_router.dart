@@ -1,11 +1,13 @@
 import 'package:go_router/go_router.dart';
 
+import '../logic/house.dart';
 import '../pages/admin_houses_page.dart';
 import '../pages/admin_landlords_page.dart';
 import '../pages/admin_line_page.dart';
-import '../pages/form_carry_page.dart';
 import '../pages/home_page.dart';
 import '../pages/house_detail_page.dart';
+import '../pages/house_form_page.dart';
+import '../pages/landlord_form_page.dart';
 import '../pages/login_page.dart';
 import '../state/app_state.dart';
 import '../widgets/app_shell.dart';
@@ -37,28 +39,26 @@ GoRouter createRouter(AuthController auth) {
           GoRoute(path: '/landlord/houses', builder: (context, state) => const AdminHousesPage()),
           GoRoute(
             path: '/landlord/houses/new',
-            builder: (context, state) => const FormCarryPage(
-              crumbs: [PageCrumb('物件', to: '/landlord/houses'), PageCrumb('新規登録')],
-            ),
+            builder: (context, state) => HouseFormPage(initialLandlordId: state.uri.queryParameters['landlord']),
           ),
           GoRoute(
             path: '/landlord/houses/:houseId/edit',
-            builder: (context, state) => const FormCarryPage(
-              crumbs: [PageCrumb('物件', to: '/landlord/houses'), PageCrumb('編集')],
-            ),
+            builder: (context, state) {
+              final extra = state.extra;
+              return HouseFormPage(
+                houseId: state.pathParameters['houseId'],
+                photosAfterSave: extra is List<HousePhoto> ? extra : null,
+              );
+            },
           ),
           GoRoute(path: '/landlord/landlords', builder: (context, state) => const AdminLandlordsPage()),
           GoRoute(
             path: '/landlord/landlords/new',
-            builder: (context, state) => const FormCarryPage(
-              crumbs: [PageCrumb('大家', to: '/landlord/landlords'), PageCrumb('新規登録')],
-            ),
+            builder: (context, state) => const LandlordFormPage(),
           ),
           GoRoute(
             path: '/landlord/landlords/:landlordId',
-            builder: (context, state) => const FormCarryPage(
-              crumbs: [PageCrumb('大家', to: '/landlord/landlords'), PageCrumb('編集')],
-            ),
+            builder: (context, state) => LandlordFormPage(landlordId: state.pathParameters['landlordId']),
           ),
           GoRoute(path: '/landlord/line', builder: (context, state) => const AdminLinePage()),
         ],

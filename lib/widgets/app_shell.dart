@@ -62,7 +62,10 @@ class _AppShellState extends State<AppShell> {
                             constraints: const BoxConstraints(maxWidth: 880),
                             child: Padding(
                               padding: EdgeInsets.only(top: narrow ? 12 : 24, bottom: narrow ? 24 : 48),
-                              child: widget.child,
+                              child: Material(
+                                type: MaterialType.transparency,
+                                child: widget.child,
+                              ),
                             ),
                           ),
                         ),

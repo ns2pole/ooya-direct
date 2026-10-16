@@ -6,7 +6,7 @@
 
 ## 構成
 
-- `web/` … Vite + React（**GitHub Pages で配信**）
+- Flutter（`lib/`。**GitHub Pages で配信**。iOS / Android も同じコード）
 - `functions/` … Cloud Functions（`submitInquiry`、LINE 通知・連携）
 - `firestore.rules` / `firestore.indexes.json` … Firestore
 
@@ -16,7 +16,7 @@
 2. **Authentication** → **Sign-in method** で **メール/パスワード（Email/Password）** を有効化する。
 3. **Authentication** → **Users** で大家用ユーザーを追加する（メールアドレスとパスワード。パスワードはリポジトリやチャットに書かず、コンソール上のみで設定する）。
 4. **承認済みドメイン**に **`あなたのユーザー名.github.io`** を追加（例: `ns2pole.github.io`）。GitHub Pages のオリジンから Firebase Auth を使うために必要です。
-5. ウェブアプリの設定値をローカルの `web/.env.local` 用に控える。
+5. ウェブアプリの設定値をローカルの `firebase_defines.json` 用に控える（`firebase_defines.example.json` をコピーして値を埋める）。
 
 ### 以前 Google でログインしていた場合（物件が一覧に出ないとき）
 
@@ -25,23 +25,22 @@ Firestore の `houses` ドキュメントの `ownerId` は、ログイン中ユ�
 ## ローカル開発
 
 ```bash
-cd web
-cp .env.example .env.local
-# .env.local を埋める
+cp firebase_defines.example.json firebase_defines.json
+# firebase_defines.json を埋める
 
-npm install
-npm run dev
+flutter pub get
+flutter run -d chrome --dart-define-from-file=firebase_defines.json
 ```
 
-ローカルでは `VITE_BASE=/` のままでよいです。
+ルーティングはハッシュ（`#/...`）です。
 
 ## GitHub Pages（自動デプロイ）
 
 1. GitHub リポジトリ → **Settings** → **Pages**
 2. **Build and deployment** → **Source は必ず GitHub Actions**（**Deploy from a branch は選ばない**）  
-   - 「ブランチからデプロイ」で `main` / `(root)` にしていると、**README.md がサイトの本文のように表示**されます。React アプリは `web/` をビルドした成果物なので、**Actions 経由だけ**にしてください。
+   - 「ブランチからデプロイ」で `main` / `(root)` にしていると、**README.md がサイトの本文のように表示**されます。公開するのは Flutter の `build/web` なので、**Actions 経由だけ**にしてください。
 3. 保存後、**Actions** タブで **GitHub Pages** ワークフローが成功しているか確認。失敗ならログを開く。初回は **Environments** で `github-pages` の承認が求められることがあります。
-4. **Settings** → **Secrets and variables** → **Actions** で次の **Repository secrets** を追加（`web/.env.local` と同じ値）:
+4. **Settings** → **Secrets and variables** → **Actions** で次の **Repository secrets** を追加（`firebase_defines.json` と同じ値。名前はこれまで通り）:
 
    - `VITE_FIREBASE_API_KEY`
    - `VITE_FIREBASE_AUTH_DOMAIN`
@@ -52,9 +51,9 @@ npm run dev
 
 5. `main` に push すると [`.github/workflows/github-pages.yml`](.github/workflows/github-pages.yml) が走り、`https://<ユーザー>.github.io/<リポジトリ名>/` に公開されます。  
    LINE 友だち追加 URL（`https://lin.ee/uvetvHd`）はワークフローに直書き済みです。  
-   **ベースパス**はワークフロー内で `VITE_BASE=/<リポジトリ名>/` に自動設定しています。
+   **ベースパス**はワークフロー内で `flutter build web --base-href /<リポジトリ名>/` に自動設定しています。Firebase の値は上記シークレットを `--dart-define` で渡します。
 
-カスタムドメインにする場合は、Vite の `base` と DNS を合わせて調整し、Firebase の承認済みドメインにもそのドメインを追加してください。
+カスタムドメインにする場合は、`flutter build web --base-href` と DNS を合わせて調整し、Firebase の承認済みドメインにもそのドメインを追加してください。
 
 ## Cloud Functions（問い合わせ・LINE 通知・ジモティー同期）
 
@@ -151,10 +150,9 @@ Firestore のルールは **Firebase Admin SDK** ではバイパスされるた�
 ## 手動で Pages に載せる場合
 
 ```bash
-cd web
 # 例: リポジトリ名が ooya-direct のとき
-VITE_BASE=/ooya-direct/ npm run build
-# 生成された dist/ を任意の方法で GitHub Pages 用ブランチや docs/ に配置
+flutter build web --base-href /ooya-direct/ --dart-define-from-file=firebase_defines.json
+# 生成された build/web を任意の方法で GitHub Pages 用ブランチや docs/ に配置
 ```
 
 ルーティングは **HashRouter**（`#/...`）です。ヘッダーにはナビリンクを出さない構成です。
@@ -171,7 +169,7 @@ VITE_BASE=/ooya-direct/ npm run build
 | 物件の新規登録 | `/landlord/houses/new` | `https://ns2pole.github.io/ooya-direct/#/landlord/houses/new` |
 | 物件の編集 | `/landlord/houses/{houseId}/edit` | `https://ns2pole.github.io/ooya-direct/#/landlord/houses/{houseId}/edit` |
 
-ローカル開発（`npm run dev`）でも `#` 以降は同じです（例: `http://localhost:5173/#/landlord`）。
+ローカル（`flutter run -d chrome`）でも `#` 以降は同じです。
 
 ## データモデル
 
@@ -215,8 +213,8 @@ VITE_BASE=/ooya-direct/ npm run build
 
 ルールは [`storage.rules`](storage.rules) のとおり、**ログイン済み・画像 5MB 未満・`image/*`・Firestore に `houses/{houseId}` があり `ownerId` がログイン UID と一致**したときだけ書き込みを許可します。デプロイ済みでも次を順に確認してください。
 
-1. **バケット名（`VITE_FIREBASE_STORAGE_BUCKET`）**  
-   ブラウザの開発者ツール → **Network** で、失敗した Storage リクエストの URL のホスト（例: `*.appspot.com` や `*.firebasestorage.app`）を確認し、Firebase コンソール → **Storage** に表示されている**既定バケット名**と一致するか見る。GitHub Actions の **Repository secrets** と `web/.env.local` の誤りがよくあります。  
+1. **バケット名（`FIREBASE_STORAGE_BUCKET`。Actions のシークレット名は `VITE_FIREBASE_STORAGE_BUCKET`）**  
+   ブラウザの開発者ツール → **Network** で、失敗した Storage リクエストの URL のホスト（例: `*.appspot.com` や `*.firebasestorage.app`）を確認し、Firebase コンソール → **Storage** に表示されている**既定バケット名**と一致するか見る。GitHub Actions の **Repository secrets** と `firebase_defines.json` の誤りがよくあります。  
    `firebase deploy --only storage` でルールはそのプロジェクトのバケットに紐づきます。**別バケット**にクライアントだけ向いていると、ルールどおりでも常に拒否されます。
 
 2. **`ownerId` と UID**  
@@ -229,7 +227,7 @@ VITE_BASE=/ooya-direct/ npm run build
 
 コンソールに出る **Fetch API cannot load … Firestore/Listen/channel … due to access control checks** は、端末上の Firestore **リアルタイム接続（WebChannel）**が WebKit 側でブロックされやすいときのログです。**Storage セキュリティルール内の `firestore.get()` はサーバー側で実行される**ため、この Listen エラーと `storage/unauthorized` に**直接の因果はありません**（Safari 上で別々に起きやすいだけです）。
 
-切り分けでは **Chrome（デスクトップ）で同じ操作**を試し、Storage が通るか・Listen エラーが消えるかを比較してください。アプリ側では WebKit 系ブラウザで Firestore の **long polling を優先**する設定を入れています（[`web/src/firebase.ts`](web/src/firebase.ts)）。
+切り分けでは **Chrome（デスクトップ）で同じ操作**を試し、Storage が通るか・Listen エラーが消えるかを比較してください。Flutter Web は Firebase SDK 経由で Firestore に接続します。
 
 ## ライセンス
 
