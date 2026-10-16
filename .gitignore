@@ -11,6 +11,18 @@ functions/lib/
 functions/node_modules/
 functions/.env
 
-# Web
-web/dist/
-web/node_modules/
+# Web (React, until the Flutter screens replace it)
+react_web/dist/
+react_web/node_modules/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.iml
+firebase_defines.json
+firebase_defines.*.json
+!firebase_defines.example.json

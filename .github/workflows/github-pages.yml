@@ -1,4 +1,4 @@
-# フロント（web/）のみ GitHub Pages に公開。Firebase Hosting は使わない。
+# フロント（react_web/）のみ GitHub Pages に公開。Firebase Hosting は使わない。
 name: GitHub Pages
 
 on:
@@ -25,13 +25,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: react_web/package-lock.json
 
       - run: npm ci
-        working-directory: web
+        working-directory: react_web
 
       - name: Build
-        working-directory: web
+        working-directory: react_web
         env:
           # https://<user>.github.io/<repo>/ 用（リポジトリ名と一致）
           VITE_BASE: /${{ github.event.repository.name }}/
@@ -49,7 +49,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web/dist
+          path: react_web/dist
 
   deploy:
     needs: build
