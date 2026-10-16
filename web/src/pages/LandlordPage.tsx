@@ -3,22 +3,25 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
   where,
+  type Timestamp,
 } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
 import { FirebaseError } from 'firebase/app';
 import { httpsCallable } from 'firebase/functions';
+import { Link } from 'react-router-dom';
 import { getDb, getFns, isFirebaseConfigured } from '../firebase';
 import { deleteAllHousePhotos } from '../lib/housePhotos';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { housePropertyListChips } from '../lib/housePropertyFields';
 import type { House, LandlordProfile } from '../types';
 import { mapHouse, houseCoverPhoto } from '../lib/mapHouse';
-import { formatDateOnly } from '../format';
+import { formatDate, formatDateOnly } from '../format';
 import { usePageTitle } from '../context/PageTitleContext';
 import { lineAddFriendUrl } from '../lib/lineConfig';
 
@@ -62,12 +65,32 @@ function messageForAuthCode(code: string): string {
   }
 }
 
+type JimotySyncResult = {
+  created: number;
+  updated: number;
+  removed: number;
+  unchanged: number;
+};
+
+type JimotyStatus = JimotySyncResult & {
+  lastSyncedAt: Timestamp | null;
+};
+
+function syncSummary(status: JimotySyncResult): string {
+  return `新規 ${status.created}件、更新 ${status.updated}件、変化なし ${status.unchanged}件、成約のため削除 ${status.removed}件`;
+}
+
 export function LandlordPage() {
   const { user, loading, signInWithEmailPassword, signOutUser } = useAuth();
+  const { showToast } = useToast();
   usePageTitle(user ? 'マイ物件' : '大家さん');
   const [houses, setHouses] = useState<House[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  const [listVersion, setListVersion] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [jimotyStatus, setJimotyStatus] = useState<JimotyStatus | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -145,7 +168,62 @@ export function LandlordPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, listVersion]);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !user) {
+      setJimotyStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(getDb(), 'settings', 'jimoty'));
+        if (cancelled || !snap.exists()) {
+          if (!cancelled) setJimotyStatus(null);
+          return;
+        }
+        const data = snap.data();
+        setJimotyStatus({
+          lastSyncedAt: (data.lastSyncedAt as Timestamp | undefined) ?? null,
+          created: Number(data.lastCreated ?? 0),
+          updated: Number(data.lastUpdated ?? 0),
+          removed: Number(data.lastRemoved ?? 0),
+          unchanged: Number(data.lastUnchanged ?? 0),
+        });
+      } catch {
+        if (!cancelled) setJimotyStatus(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, listVersion]);
+
+  async function onSyncJimoty() {
+    if (!user || syncing) return;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const fn = httpsCallable<Record<string, never>, JimotySyncResult>(
+        getFns(),
+        'syncJimotyNow'
+      );
+      const response = await fn({});
+      const summary = syncSummary(response.data);
+      showToast(`同期しました。${summary}`, 'success');
+      setListVersion((version) => version + 1);
+    } catch (err) {
+      const message =
+        err instanceof FirebaseError ? err.message : '同期に失敗しました。';
+      setSyncError(message);
+      showToast(message, 'error');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function handleLoginSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -270,13 +348,36 @@ export function LandlordPage() {
         </button>
       </div>
 
-      <div className="row">
-        <Link to="/landlord/houses/new" className="btn primary">
-          新規登録
-        </Link>
-        <Link to="/" className="btn ghost">
-          物件一覧
-        </Link>
+      <div className="stack">
+        <div className="row">
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => void onSyncJimoty()}
+            disabled={syncing}
+          >
+            {syncing ? '同期中…' : 'ジモティーから同期'}
+          </button>
+          <Link to="/landlord/houses/new" className="btn primary">
+            新規登録
+          </Link>
+          <Link to="/" className="btn ghost">
+            物件一覧
+          </Link>
+        </div>
+        <p className="muted small">
+          未成約のジモティー掲載だけを、このアカウントの物件として取り込みます。内容が変わった項目だけ上書きし、成約になった取り込み物件は削除します。毎日
+          23:00〜23:59 にも1回、自動で同期します。
+        </p>
+        {jimotyStatus?.lastSyncedAt ? (
+          <p className="muted small">
+            最終同期: {formatDate(jimotyStatus.lastSyncedAt)}（
+            {syncSummary(jimotyStatus)}）
+          </p>
+        ) : (
+          <p className="muted small">まだ同期していません。</p>
+        )}
+        {syncError ? <p className="text-error">{syncError}</p> : null}
       </div>
 
       <section className="stack line-link-panel" aria-labelledby="line-link-heading">

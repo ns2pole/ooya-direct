@@ -124,5 +124,10 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
     }
+
+    match /settings/{docId} {
+      allow read: if request.auth != null && docId == "jimoty";
+      allow write: if false;
+    }
   }
 }

@@ -7,6 +7,8 @@ import { onInquiryCreated } from "./inquiryNotify";
 
 admin.initializeApp();
 
+export { syncJimotyNow, enqueueJimotySync, runJimotySyncTask } from "./jimoty/triggers";
+
 const REGION = "asia-northeast1";
 const MAX_MESSAGE = 2000;
 /** スパム緩和: 物件あたりの問い合わせ上限（この件数に達すると新規投稿不可） */

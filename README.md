@@ -56,9 +56,9 @@ npm run dev
 
 カスタムドメインにする場合は、Vite の `base` と DNS を合わせて調整し、Firebase の承認済みドメインにもそのドメインを追加してください。
 
-## Cloud Functions（問い合わせ・LINE 通知）
+## Cloud Functions（問い合わせ・LINE 通知・ジモティー同期）
 
-リージョンは **asia-northeast1** です。
+リージョンは **asia-northeast1** です。ジモティーの定時同期は **Blaze プラン**が必要です。
 
 | 関数 | 種別 | 説明 |
 |------|------|------|
@@ -67,11 +67,21 @@ npm run dev
 | `unlinkLine` | Callable | LINE 連携解除（要ログイン） |
 | `lineWebhook` | HTTP | LINE からの Webhook（連携コード受付） |
 | `onInquiryCreated` | Firestore トリガー | 問い合わせ作成時に LINE Push 通知 |
+| `syncJimotyNow` | Callable | 管理画面からジモティーの未成約物件を取り込む（要ログイン） |
+| `enqueueJimotySync` | スケジュール | 毎日 23:00（日本時間）に、0〜59分後の同期を1回予約 |
+| `runJimotySyncTask` | Cloud Tasks | 予約時刻に未成約物件を取り込む |
 
 ```bash
 cd functions && npm install && npm run build
 cd .. && firebase deploy --only functions,firestore:rules
 ```
+
+ジモティーの [ミッチーさんのプロフィール](https://jmty.jp/profiles/62282557f0a7ee2c83f440bf) から、成約バッジの無い不動産だけを `houses` に登録します。ドキュメント ID は `jmty-` + 記事 ID です。参考リンクに掲載 URL を入れます。
+
+- 同じ記事は、タイトル・家賃・概要・住所・間取りなどが変わったときだけ上書きします。`createdAt` と、大家がアップロードした代表画像は残します。
+- 一覧に無くなった、または成約バッジが付いた取り込み物件だけ削除します。その物件の問い合わせも一緒に消えます。手入力の物件（ID が `jmty-` で始まらないもの）は触りません。
+- 管理画面（ログイン後の「マイ物件」）の **ジモティーから同期** で、その場でも取り込めます。同期先の `ownerId` は押したアカウントです。
+- 初回の自動同期は、大家アカウントが1人ならその UID、それ以外は管理画面で一度同期したアカウントを使います。
 
 ## LINE 通知（あなたがやること）
 
