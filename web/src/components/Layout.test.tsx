@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './Layout';
 import {
@@ -8,12 +8,19 @@ import {
   usePageHeader,
   usePageHeaderEndAction,
 } from '../context/PageTitleContext';
+import { ToastProvider } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { houseDetailHeaderCrumbs } from '../lib/pageHeaderCrumbs';
 import * as scrollToElement from '../lib/scrollToElement';
 
 vi.mock('../firebase', () => ({
   isFirebaseConfigured: true,
   missingFirebaseEnvKeys: () => [],
+  getFns: () => ({}),
+}));
+
+vi.mock('../context/AuthContext', () => ({
+  useAuth: vi.fn(),
 }));
 
 function HouseDetailHeaderStub() {
@@ -41,6 +48,15 @@ function HouseListHeaderStub() {
 }
 
 describe('Layout header breadcrumbs', () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      signInWithEmailPassword: vi.fn(),
+      signOutUser: vi.fn(),
+    });
+  });
+
   afterEach(() => {
     cleanup();
   });
@@ -139,5 +155,37 @@ describe('Layout header breadcrumbs', () => {
 
     expect(screen.getByRole('link', { name: '大家ダイレクト(2/3)' })).toHaveAttribute('href', '/');
     expect(screen.getByText('掲載: 2026/8/4')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: '管理' })).not.toBeInTheDocument();
+  });
+
+  it('ログイン中は管理列に同期、物件、大家、LINE通知、ログアウトがある', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { uid: 'admin' } as ReturnType<typeof useAuth>['user'],
+      loading: false,
+      signInWithEmailPassword: vi.fn(),
+      signOutUser: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <PageTitleProvider>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<p>一覧本文</p>} />
+              </Route>
+            </Routes>
+          </PageTitleProvider>
+        </ToastProvider>
+      </MemoryRouter>
+    );
+
+    const nav = screen.getByRole('navigation', { name: '管理' });
+    expect(nav).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '同期' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '物件' })).toHaveAttribute('href', '/landlord/houses');
+    expect(screen.getByRole('link', { name: '大家' })).toHaveAttribute('href', '/landlord/landlords');
+    expect(screen.getByRole('link', { name: 'LINE通知' })).toHaveAttribute('href', '/landlord/line');
+    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
   });
 });

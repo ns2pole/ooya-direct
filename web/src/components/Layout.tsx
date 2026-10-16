@@ -5,8 +5,11 @@ import {
   usePageHeaderEndActionValue,
   usePageHeaderValue,
 } from '../context/PageTitleContext';
+import { AdminRefreshProvider } from '../context/AdminRefreshContext';
+import { useAuth } from '../context/AuthContext';
 import { scrollToElementId } from '../lib/scrollToElement';
 import { isFirebaseConfigured, missingFirebaseEnvKeys } from '../firebase';
+import { AdminNav } from './AdminNav';
 import { HouseDetailBackButton } from './HouseDetailBackButton';
 import { ScrollToTopOnNavigate } from './ScrollToTopOnNavigate';
 
@@ -65,11 +68,13 @@ function HeaderEnd() {
 export function Layout() {
   const isHouseDetail = Boolean(useMatch('/houses/:houseId'));
   const listProgress = useListProgressValue();
+  const { user } = useAuth();
   const brandLabel = listProgress
     ? `大家ダイレクト(${listProgress.current}/${listProgress.total})`
     : '大家ダイレクト';
 
   return (
+    <AdminRefreshProvider>
     <div className="app-shell">
       <ScrollToTopOnNavigate />
       <header className="app-header">
@@ -82,6 +87,7 @@ export function Layout() {
           </Link>
           <HeaderEnd />
         </div>
+        {user ? <AdminNav /> : null}
       </header>
 
       {!isFirebaseConfigured ? (
@@ -110,5 +116,6 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
+    </AdminRefreshProvider>
   );
 }

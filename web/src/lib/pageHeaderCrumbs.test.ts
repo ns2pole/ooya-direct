@@ -24,16 +24,16 @@ describe('houseDetailHeaderCrumbs', () => {
 });
 
 describe('houseFormHeaderCrumbs', () => {
-  it('新規登録は マイ物件 / 新規登録 を返す', () => {
+  it('新規登録は 物件 / 新規登録 を返す', () => {
     expect(houseFormHeaderCrumbs(true)).toEqual([
-      { label: 'マイ物件', to: '/landlord' },
+      { label: '物件', to: '/landlord/houses' },
       { label: '新規登録' },
     ]);
   });
 
-  it('編集は マイ物件 / 編集 を返す', () => {
+  it('編集は 物件 / 編集 を返す', () => {
     expect(houseFormHeaderCrumbs(false)).toEqual([
-      { label: 'マイ物件', to: '/landlord' },
+      { label: '物件', to: '/landlord/houses' },
       { label: '編集' },
     ]);
   });

@@ -14,7 +14,7 @@ export function houseDetailHeaderCrumbs(house: HouseDetailHeaderInput): PageHead
 
 export function houseFormHeaderCrumbs(isNew: boolean): PageHeaderCrumb[] {
   return [
-    { label: 'マイ物件', to: '/landlord' },
+    { label: '物件', to: '/landlord/houses' },
     { label: isNew ? '新規登録' : '編集' },
   ];
 }

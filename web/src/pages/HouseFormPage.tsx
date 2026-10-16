@@ -526,7 +526,7 @@ export function HouseFormPage() {
     return (
       <section className="panel stack">
         <p className="text-error">{loadError}</p>
-        <Link to="/landlord">マイ物件へ</Link>
+        <Link to="/landlord/houses">物件へ</Link>
       </section>
     );
   }
@@ -543,7 +543,7 @@ export function HouseFormPage() {
     return (
       <section className="panel stack">
         <p>先に大家を登録してください。</p>
-        <Link to="/landlord">マイ物件へ</Link>
+        <Link to="/landlord/houses">物件へ</Link>
       </section>
     );
   }
@@ -662,7 +662,7 @@ export function HouseFormPage() {
           <button type="submit" className="btn primary" disabled={saving}>
             {saving ? '保存中…' : '保存'}
           </button>
-          <Link to="/landlord" className="btn ghost">
+          <Link to="/landlord/houses" className="btn ghost">
             キャンセル
           </Link>
         </div>

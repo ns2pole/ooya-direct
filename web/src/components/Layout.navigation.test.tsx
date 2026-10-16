@@ -9,6 +9,16 @@ import * as scrollToTop from '../lib/scrollToTop';
 vi.mock('../firebase', () => ({
   isFirebaseConfigured: true,
   missingFirebaseEnvKeys: () => [],
+  getFns: () => ({}),
+}));
+
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    signInWithEmailPassword: vi.fn(),
+    signOutUser: vi.fn(),
+  }),
 }));
 
 function HomeStub() {
