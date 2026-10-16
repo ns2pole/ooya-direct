@@ -193,5 +193,44 @@ describe('Layout header breadcrumbs', () => {
     expect(screen.getByRole('link', { name: '大家' })).toHaveAttribute('href', '/landlord/landlords');
     expect(screen.getByRole('link', { name: 'LINE通知' })).toHaveAttribute('href', '/landlord/line');
     expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '同期' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '物件' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '大家' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'LINE通知' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'ログアウト' }).querySelector('svg')).toBeTruthy();
+  });
+
+  it('ログアウトは確認してから実行する', () => {
+    const signOutUser = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      user: { uid: 'admin' } as ReturnType<typeof useAuth>['user'],
+      loading: false,
+      signInWithEmailPassword: vi.fn(),
+      signOutUser,
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <PageTitleProvider>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<p>一覧本文</p>} />
+              </Route>
+            </Routes>
+          </PageTitleProvider>
+        </ToastProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
+    expect(confirmSpy).toHaveBeenCalledWith('ログアウトしますか？');
+    expect(signOutUser).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
+    expect(signOutUser).toHaveBeenCalledTimes(1);
+    confirmSpy.mockRestore();
   });
 });
