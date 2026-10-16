@@ -8,6 +8,7 @@ import {
   type SyncHouseSnapshot,
   type SyncListing,
 } from "../portals/syncPlan";
+import { importArticlePhotosIfEmpty } from "./photos";
 import { type JimotyListing } from "./parse";
 
 const SETTINGS_PATH = "settings/jimoty";
@@ -35,15 +36,23 @@ function db() {
   return admin.firestore();
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, {
+async function fetchResponse(
+  url: string,
+  accept: string,
+  redirect: RequestRedirect
+): Promise<Response> {
+  return fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
-      Accept: "text/html",
+      Accept: accept,
       "Accept-Language": "ja",
     },
-    redirect: "follow",
+    redirect,
   });
+}
+
+async function fetchText(url: string): Promise<string> {
+  const response = await fetchResponse(url, "text/html", "follow");
   if (!response.ok) {
     throw new Error(`ジモティーの取得に失敗しました（${response.status}）。`);
   }
@@ -148,6 +157,25 @@ async function applySource(
 
   for (const id of plan.removeIds) {
     await deleteHouseTree(houses.doc(id));
+  }
+
+  for (const listing of listings) {
+    if (!listing.referenceUrl) continue;
+    try {
+      const saved = await importArticlePhotosIfEmpty(
+        houses.doc(listing.docId),
+        listing.referenceUrl,
+        source.ownerId,
+        source.id,
+        fetchText,
+        (url) => fetchResponse(url, "image/*", "manual")
+      );
+      if (saved > 0) {
+        console.log("jimoty photos imported", listing.docId, saved);
+      }
+    } catch (err) {
+      console.error("jimoty photos failed", listing.docId, err);
+    }
   }
 
   return {

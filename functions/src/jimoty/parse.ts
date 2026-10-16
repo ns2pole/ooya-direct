@@ -216,6 +216,24 @@ function listingFromCard(href: string, body: string): JimotyListing | null {
   };
 }
 
+const MAX_ARTICLE_PHOTOS = 20;
+
+/** 記事ページの掲載画像（lightbox の大きい方）を掲載順で返す。関連記事のサムネは含めない。 */
+export function articlePhotoUrls(html: string): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const match of html.matchAll(/<a\b[^>]*>/gi)) {
+    const tag = match[0];
+    if (!/rel=["']lightbox\[article-images\]["']/.test(tag)) continue;
+    const href = /href=["'](https:\/\/cdn\.jmty\.jp\/articles\/images\/[^"']+)["']/.exec(tag)?.[1];
+    if (!href || seen.has(href)) continue;
+    seen.add(href);
+    urls.push(href);
+    if (urls.length >= MAX_ARTICLE_PHOTOS) break;
+  }
+  return urls;
+}
+
 export function parseJimotyListPage(html: string, pageUrl: string): ParsedListPage {
   const listings: JimotyListing[] = [];
   let estateCount = 0;
