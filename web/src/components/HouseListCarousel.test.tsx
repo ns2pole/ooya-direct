@@ -1,10 +1,15 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import type { House } from '../types';
+import type { House, HousePhoto } from '../types';
 import { PageTitleProvider, useListProgressValue } from '../context/PageTitleContext';
+import { listHousePhotos } from '../lib/housePhotos';
 import { HouseListCarousel } from './HouseListCarousel';
 import { EMPTY_HOUSE_PROPERTY_FIELDS } from '../lib/housePropertyFields';
+
+vi.mock('../lib/housePhotos', () => ({
+  listHousePhotos: vi.fn(async () => []),
+}));
 
 function mockHouse(id: string, title: string): House {
   return {
@@ -51,6 +56,10 @@ function renderCarousel(houses: House[], initialEntry = '/') {
   );
 }
 
+function mainImage() {
+  return screen.getByRole('link', { name: 'テスト物件1の写真' }).querySelector('img');
+}
+
 function swipe(section: HTMLElement, fromX: number, toX: number) {
   fireEvent.touchStart(section, {
     changedTouches: [{ clientX: fromX, clientY: 100 }],
@@ -60,9 +69,15 @@ function swipe(section: HTMLElement, fromX: number, toX: number) {
   });
 }
 
+function photo(id: string, url: string, order: number): HousePhoto {
+  return { id, url, order, label: null, createdAt: null };
+}
+
 describe('HouseListCarousel', () => {
   afterEach(() => {
     cleanup();
+    vi.mocked(listHousePhotos).mockReset();
+    vi.mocked(listHousePhotos).mockResolvedValue([]);
   });
 
   it('2件あるとき左スワイプで2件目、右スワイプで1件目に戻る', async () => {
@@ -72,9 +87,9 @@ describe('HouseListCarousel', () => {
     expect(screen.getByText('テスト物件1')).toBeInTheDocument();
     expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
     const hint = document.querySelector('.house-carousel-swipe-hint');
-    expect(hint).toHaveTextContent('画像タップで詳細、左右スワイプで他物件へ');
+    expect(hint).toHaveTextContent('メイン画像タップで詳細、左右スワイプで他物件へ');
     expect(hint?.querySelectorAll('.house-carousel-swipe-hint-em')).toHaveLength(2);
-    expect(screen.getByText('画像タップ')).toHaveClass('house-carousel-swipe-hint-em');
+    expect(screen.getByText('メイン画像タップ')).toHaveClass('house-carousel-swipe-hint-em');
     expect(screen.getByText('左右スワイプ')).toHaveClass('house-carousel-swipe-hint-em');
     expect(screen.getByRole('button', { name: '前の物件' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '次の物件' })).toBeEnabled();
@@ -106,7 +121,7 @@ describe('HouseListCarousel', () => {
     renderCarousel([mockHouse('h1', 'テスト物件1')]);
 
     expect(screen.getByTestId('list-progress')).toHaveTextContent('1/1');
-    expect(screen.queryByText('画像タップで詳細、左右スワイプで他物件へ')).toBeNull();
+    expect(screen.queryByText('メイン画像タップで詳細、左右スワイプで他物件へ')).toBeNull();
     expect(screen.queryByRole('button', { name: '前の物件' })).toBeNull();
     expect(screen.queryByRole('button', { name: '次の物件' })).toBeNull();
   });
@@ -156,6 +171,47 @@ describe('HouseListCarousel', () => {
 
     expect(screen.getByRole('link', { name: 'テスト物件1' })).toHaveAttribute('href', '/houses/h1');
     expect(screen.getByRole('link', { name: 'テスト物件1の写真' })).toHaveAttribute('href', '/houses/h1');
+  });
+
+  it('サムネイルをタップするとメイン画像と入れ替わる', async () => {
+    vi.mocked(listHousePhotos).mockResolvedValue([
+      photo('p1', 'https://example.com/1.jpg', 0),
+      photo('p2', 'https://example.com/2.jpg', 1),
+      photo('p3', 'https://example.com/3.jpg', 2),
+    ]);
+    const house = mockHouse('h1', 'テスト物件1');
+    house.coverPhotoUrl = 'https://example.com/1.jpg';
+    renderCarousel([house, mockHouse('h2', 'テスト物件2')]);
+
+    expect(await screen.findByRole('button', { name: '2枚目を表示' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3枚目を表示' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '1枚目を表示' })).toBeNull();
+    expect(mainImage()).toHaveAttribute('src', 'https://example.com/1.jpg');
+
+    fireEvent.click(screen.getByRole('button', { name: '2枚目を表示' }));
+    expect(mainImage()).toHaveAttribute('src', 'https://example.com/2.jpg');
+    expect(screen.getByRole('button', { name: '1枚目を表示' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3枚目を表示' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '2枚目を表示' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '1枚目を表示' }));
+    expect(mainImage()).toHaveAttribute('src', 'https://example.com/1.jpg');
+    expect(screen.queryByRole('button', { name: '1枚目を表示' })).toBeNull();
+    expect(screen.getByRole('button', { name: '2枚目を表示' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3枚目を表示' })).toBeInTheDocument();
+  });
+
+  it('サムネイル上の横スワイプでは物件が変わらない', async () => {
+    vi.mocked(listHousePhotos).mockResolvedValue([
+      photo('p1', 'https://example.com/1.jpg', 0),
+      photo('p2', 'https://example.com/2.jpg', 1),
+    ]);
+    renderCarousel([mockHouse('h1', 'テスト物件1'), mockHouse('h2', 'テスト物件2')]);
+
+    const strip = await screen.findByLabelText('ほかの写真');
+    swipe(strip, 200, 40);
+    expect(screen.getByText('テスト物件1')).toBeInTheDocument();
+    expect(screen.getByTestId('list-progress')).toHaveTextContent('1/2');
   });
 
   it('カード内に掲載日を出さない', () => {

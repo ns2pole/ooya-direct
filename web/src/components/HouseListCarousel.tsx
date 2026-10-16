@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { House } from '../types';
 import { useListProgress } from '../context/PageTitleContext';
+import { listHousePhotos } from '../lib/housePhotos';
 import { houseCoverPhoto } from '../lib/mapHouse';
 import {
   HOUSE_LIST_QUERY_KEY,
@@ -25,8 +26,29 @@ export function HouseListCarousel({ houses }: Props) {
   const house = houses[safeIndex];
   const summary = house ? houseListSummaryLines(house) : null;
   const cover = house ? houseCoverPhoto(house) : null;
+  const houseId = house?.id ?? '';
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipedRef = useRef(false);
+
+  useEffect(() => {
+    setSelectedPhoto(0);
+    setPhotoUrls([]);
+    if (!houseId) return;
+    let cancelled = false;
+    listHousePhotos(houseId)
+      .then((photos) => {
+        if (cancelled) return;
+        setPhotoUrls(photos.map((photo) => photo.url).filter((url) => url.length > 0));
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoUrls([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [houseId]);
 
   useListProgress(
     count > 0 && summary
@@ -49,6 +71,13 @@ export function HouseListCarousel({ houses }: Props) {
 
   const canGoPrev = safeIndex > 0;
   const canGoNext = safeIndex < count - 1;
+  const gallery = photoUrls.length > 0 ? photoUrls : cover ? [cover] : [];
+  const selectedIndex = gallery.length === 0 ? 0 : Math.min(selectedPhoto, gallery.length - 1);
+  const mainUrl = gallery[selectedIndex] ?? null;
+  const thumbs =
+    gallery.length > 1
+      ? gallery.map((url, index) => ({ url, index })).filter((item) => item.index !== selectedIndex)
+      : [];
 
   function selectIndex(nextIndex: number) {
     const nextHouse = houses[clampCarouselIndex(nextIndex, count)];
@@ -67,6 +96,7 @@ export function HouseListCarousel({ houses }: Props) {
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
+    if ((e.target as HTMLElement).closest('.house-carousel-thumbs')) return;
     if (e.key === 'ArrowLeft' && canGoPrev) {
       e.preventDefault();
       goPrev();
@@ -78,6 +108,10 @@ export function HouseListCarousel({ houses }: Props) {
   }
 
   function onTouchStart(e: React.TouchEvent) {
+    if ((e.target as HTMLElement).closest('.house-carousel-thumbs')) {
+      touchStartRef.current = null;
+      return;
+    }
     const t = e.changedTouches[0];
     touchStartRef.current = { x: t.clientX, y: t.clientY };
     swipedRef.current = false;
@@ -117,12 +151,36 @@ export function HouseListCarousel({ houses }: Props) {
       tabIndex={-1}
     >
       {count > 1 ? (
-        <p className="house-carousel-swipe-hint">
-          <span className="house-carousel-swipe-hint-em">画像タップ</span>
-          で詳細、
-          <span className="house-carousel-swipe-hint-em">左右スワイプ</span>
-          で他物件へ
-        </p>
+        <div className="house-carousel-hint-row">
+          <button
+            type="button"
+            className="house-carousel-nav house-carousel-nav--prev"
+            aria-label="前の物件"
+            disabled={!canGoPrev}
+            onClick={goPrev}
+          >
+            <span className="house-carousel-nav-mark" aria-hidden="true">
+              ▼
+            </span>
+          </button>
+          <p className="house-carousel-swipe-hint">
+            <span className="house-carousel-swipe-hint-em">メイン画像タップ</span>
+            で詳細、
+            <span className="house-carousel-swipe-hint-em">左右スワイプ</span>
+            で他物件へ
+          </p>
+          <button
+            type="button"
+            className="house-carousel-nav house-carousel-nav--next"
+            aria-label="次の物件"
+            disabled={!canGoNext}
+            onClick={goNext}
+          >
+            <span className="house-carousel-nav-mark" aria-hidden="true">
+              ▼
+            </span>
+          </button>
+        </div>
       ) : null}
 
       <div className="house-carousel-card">
@@ -132,9 +190,9 @@ export function HouseListCarousel({ houses }: Props) {
           aria-label={`${summary.title}の写真`}
         >
           <div className="house-carousel-hero">
-            {cover ? (
+            {mainUrl ? (
               <img
-                src={cover}
+                src={mainUrl}
                 alt=""
                 className="house-carousel-hero-img"
                 width={880}
@@ -147,37 +205,24 @@ export function HouseListCarousel({ houses }: Props) {
             )}
           </div>
         </Link>
-        <div className="house-carousel-title-row">
-          {count > 1 ? (
-            <button
-              type="button"
-              className="house-carousel-nav house-carousel-nav--prev"
-              aria-label="前の物件"
-              disabled={!canGoPrev}
-              onClick={goPrev}
-            >
-              <span className="house-carousel-nav-mark" aria-hidden="true">
-                ▼
-              </span>
-            </button>
-          ) : null}
-          <Link to={`/houses/${house.id}`} className="house-carousel-title">
-            {summary.title}
-          </Link>
-          {count > 1 ? (
-            <button
-              type="button"
-              className="house-carousel-nav house-carousel-nav--next"
-              aria-label="次の物件"
-              disabled={!canGoNext}
-              onClick={goNext}
-            >
-              <span className="house-carousel-nav-mark" aria-hidden="true">
-                ▼
-              </span>
-            </button>
-          ) : null}
-        </div>
+        {thumbs.length > 0 ? (
+          <div className="house-carousel-thumbs" aria-label="ほかの写真">
+            {thumbs.map((item) => (
+              <button
+                key={`${item.index}-${item.url}`}
+                type="button"
+                className="house-carousel-thumb"
+                aria-label={`${item.index + 1}枚目を表示`}
+                onClick={() => setSelectedPhoto(item.index)}
+              >
+                <img src={item.url} alt="" loading="lazy" decoding="async" />
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <Link to={`/houses/${house.id}`} className="house-carousel-title">
+          {summary.title}
+        </Link>
         <div className="house-carousel-body">
           <HousePropertyTable house={house} />
         </div>
