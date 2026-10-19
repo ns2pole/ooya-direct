@@ -43,6 +43,8 @@ jobs:
             --dart-define=FIREBASE_STORAGE_BUCKET="$FIREBASE_STORAGE_BUCKET" \
             --dart-define=FIREBASE_MESSAGING_SENDER_ID="$FIREBASE_MESSAGING_SENDER_ID" \
             --dart-define=FIREBASE_APP_ID="$FIREBASE_APP_ID"
+          # App Store / Play Store 用に公開 URL が必要なプライバシーポリシー
+          cp privacy-policy.html build/web/privacy-policy.html
 
       - uses: actions/configure-pages@v4
 

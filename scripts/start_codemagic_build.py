@@ -3,10 +3,12 @@
 
 Reads:
   .codemagic_api_token or CODEMAGIC_API_TOKEN
-  firebase_defines.json
+  firebase_defines.ios.json（なければ firebase_defines.json）
   ~/.appstoreconnect/private_keys/AuthKey_ATBD5UGJTG.p8
   codemagic-signing/distribution.p12
   codemagic-signing/.p12_password
+
+iOS IPA には FIREBASE_APP_ID が 1:…:ios:… である必要がある。
 """
 
 from __future__ import annotations
@@ -33,11 +35,22 @@ def fail(message: str) -> None:
 
 def token() -> str:
     value = os.environ.get("CODEMAGIC_API_TOKEN", "").strip()
-    path = ROOT / ".codemagic_api_token"
-    if not value and path.exists():
-        value = path.read_text().strip()
+    candidates = [
+        ROOT / ".codemagic_api_token",
+        Path.home() / ".codemagic_api_token",
+    ]
+    for path in candidates:
+        if value:
+            break
+        if path.exists():
+            value = path.read_text().strip()
+            if value:
+                print(f"token: {path}")
     if not value:
-        fail("CODEMAGIC_API_TOKEN か .codemagic_api_token が必要です")
+        fail(
+            "CODEMAGIC_API_TOKEN / プロジェクトの .codemagic_api_token / "
+            "~/.codemagic_api_token のいずれかが必要です"
+        )
     return value
 
 
@@ -62,8 +75,27 @@ def request(api_token: str, method: str, url: str, payload: dict | None = None):
         return error.code, detail
 
 
+def load_firebase_defines() -> tuple[Path, dict]:
+    ios_path = ROOT / "firebase_defines.ios.json"
+    web_path = ROOT / "firebase_defines.json"
+    path = ios_path if ios_path.exists() else web_path
+    if not path.exists():
+        fail("firebase_defines.ios.json または firebase_defines.json が必要です")
+    defines = json.loads(path.read_text())
+    app_id = str(defines.get("FIREBASE_APP_ID", "")).strip()
+    if ":web:" in app_id:
+        fail(
+            f"{path.name} の FIREBASE_APP_ID が Web 用です ({app_id}). "
+            "iOS 用 (1:…:ios:…) を firebase_defines.ios.json に置いてください"
+        )
+    if app_id and ":ios:" not in app_id:
+        print(f"WARNING: FIREBASE_APP_ID に :ios: がありません: {app_id}")
+    print(f"firebase defines: {path.name}")
+    return path, defines
+
+
 def load_secrets() -> dict[str, tuple[str, str]]:
-    defines = json.loads((ROOT / "firebase_defines.json").read_text())
+    _, defines = load_firebase_defines()
     p8 = Path.home().joinpath(".appstoreconnect/private_keys/AuthKey_ATBD5UGJTG.p8").read_text()
     p12 = (ROOT / "codemagic-signing" / "distribution.p12").read_bytes()
     password = (ROOT / "codemagic-signing" / ".p12_password").read_text().strip()
@@ -83,7 +115,7 @@ def load_secrets() -> dict[str, tuple[str, str]]:
     for key in firebase_keys:
         value = str(defines.get(key, "")).strip()
         if not value:
-            fail(f"firebase_defines.json の {key} が空です")
+            fail(f"Firebase defines の {key} が空です")
         secrets[key] = (value, "firebase_credentials")
     return secrets
 
